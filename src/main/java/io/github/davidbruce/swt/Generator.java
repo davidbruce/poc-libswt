@@ -5,6 +5,7 @@ import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.utils.SourceRoot;
 import com.google.common.base.CaseFormat;
 import com.google.common.reflect.ClassPath;
@@ -68,6 +69,8 @@ public class Generator {
                     //set return type
                     if (method.getTypeAsString().equals("boolean")) {
                         methodSpec.returns(TypeName.BYTE);
+                    } else if (method.getTypeAsString().equals("void")) {
+                        methodSpec.returns(TypeName.VOID);
                     } else if (method.getTypeAsString().equals("String")) {
                         methodSpec.returns(CCharPointer.class);
                     } else if (method.getType().isPrimitiveType()) {
@@ -98,10 +101,12 @@ public class Generator {
                                     parameter.getNameAsString() + "Ref"));
                         }
                     });
-                    body.add(MessageFormat.format("return {0}.{1};\n",
+
+                    body.add(MessageFormat.format("return {0}.{1}({2});\n",
                             targetObject,
-                            method.getNameAsString()
-                            ));
+                            method.getNameAsString(),
+                            method.getParameters().stream().map(Parameter::getNameAsString).collect(Collectors.joining(", "))
+                    ));
 //                    body.addStatement()
 //                    methodSpec.addCode();
 
