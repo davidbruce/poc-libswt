@@ -53,7 +53,7 @@ public class Generator {
         display.get()
                 .getMethods()
                 .stream()
-                .filter(method -> method.isPublic() && !method.isStatic())
+                .filter(method -> method.isPublic() && !method.isStatic() && !method.isGeneric())
                 .forEach(method -> {
                     var targetObject = "display";
                     var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
