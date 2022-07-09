@@ -1,3 +1,17 @@
+# Config Directories
+.idea/**
+
+**/reports/**
+
+# Output Directories
+target/**
+out/**
+
+# Compiled shared library
+*.dylib
+*.so
+*.dll
+
 # Compiled class file
 *.class
 

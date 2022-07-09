@@ -1,0 +1,1 @@
+native-image -H:ConfigurationFileDirectories=META-INF/native-image -H:Name=libnativeimpl -cp ../target/classes:../target/dependency/org.eclipse.swt.cocoa.macosx.aarch64-3.120.0.jar:../target/dependency/org.eclipse.swt-3.120.0.jar -J-XstartOnFirstThread --shared --no-fallback

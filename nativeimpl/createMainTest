@@ -1,0 +1,1 @@
+zig cc -I. -L. -lnativeimpl maintest.c -o maintest

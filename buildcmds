@@ -1,0 +1,2 @@
+java  -agentlib:native-image-agent=config-output-dir=META-INF/native-image/ -XstartOnFirstThread -jar swt-shared.jar
+native-image -H:ConfigurationFileDirectories=META-INF/native-image -jar swt-shared.jar --no-fallback

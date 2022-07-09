@@ -1,0 +1,9 @@
+[SHARED_LIB]
+libnativeimpl.dylib
+
+[HEADER]
+libnativeimpl.h
+graal_isolate.h
+libnativeimpl_dynamic.h
+graal_isolate_dynamic.h
+

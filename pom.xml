@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <!-- model version - always 4.0.0 for Maven 2.x POMs -->
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- project coordinates - values which uniquely identify this project -->
+  <groupId>io.github.davidbruce</groupId>
+  <artifactId>swt-shared</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+
+
+  <properties>
+    <java.version>17</java.version>
+    <graalvm.plugin.version>20.3.6.1</graalvm.plugin.version>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.0</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.graalvm.nativeimage</groupId>
+        <artifactId>native-image-maven-plugin</artifactId>
+        <version>${graalvm.plugin.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>native-image</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+        </executions>
+        <configuration>
+          <skip>false</skip>
+          <imageName>example</imageName>
+          <buildArgs>
+            --no-fallback
+            --shared
+          </buildArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <!-- library dependencies -->
+  <dependencies>
+
+    <!-- https://mvnrepository.com/artifact/org.eclipse.platform/org.eclipse.swt.cocoa.macosx.aarch64 -->
+    <dependency>
+      <groupId>org.eclipse.platform</groupId>
+      <artifactId>org.eclipse.swt.cocoa.macosx.aarch64</artifactId>
+      <version>3.120.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.graalvm.sdk</groupId>
+      <artifactId>graal-sdk</artifactId>
+      <version>22.1.0.1</version>
+    </dependency>
+  </dependencies>
+</project>

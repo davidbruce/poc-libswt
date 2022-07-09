@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Main-Class: io.github.davidbruce.Main
+Class-Path: org.eclipse.swt.cocoa.macosx.aarch64-3.120.0.jar graal-sdk-2
+ 2.1.0.1.jar org.eclipse.swt-3.120.0.jar
+

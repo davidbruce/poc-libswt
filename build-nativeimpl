@@ -1,0 +1,3 @@
+native-image -J-Dfile.encoding=UTF-8 -J-XstartOnFirstThread -cp ../target/classes/:../target/dependency/org.eclipse.swt.cocoa.macosx.aarch64-3.120.0.jar:../target/dependency/org.eclipse.swt-3.120.0.jar -H:Name=libnativeimpl --shared --verbose --no-server --no-fallback --allow-incomplete-classpath --report-unsupported-elements-at-runtime -H:+JNIVerboseLookupErrors -H:+ReportExceptionStackTraces
+
+native-image -H:ConfigurationFileDirectories=META-INF/native-image -cp ../target/classes/:../target/dependency/org.eclipse.swt.cocoa.macosx.aarch64-3.120.0.jar:../target/dependency/org.eclipse.swt-3.120.0.jar --shared --H:Name=libnativeimpl
