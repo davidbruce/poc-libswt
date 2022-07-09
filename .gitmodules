@@ -1,0 +1,4 @@
+[submodule "eclipse.platform.swt"]
+	path = eclipse.platform.swt
+	url = https://github.com/eclipse-platform/eclipse.platform.swt.git
+	branch = R4_24_maintenance
