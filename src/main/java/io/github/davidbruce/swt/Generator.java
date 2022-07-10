@@ -1,7 +1,16 @@
 package io.github.davidbruce.swt;
 
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ast.ImportDeclaration;
+import com.github.javaparser.symbolsolver.JavaSymbolSolver;
+import com.github.javaparser.symbolsolver.resolution.SymbolSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
+import com.github.javaparser.utils.ParserCollectionStrategy;
 import com.github.javaparser.utils.SourceRoot;
 import com.google.common.base.CaseFormat;
+import com.google.common.reflect.ClassPath;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -12,9 +21,13 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.instrument.Instrumentation;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -29,7 +42,22 @@ import org.graalvm.nativeimage.c.type.CCharPointerPointer;
 
 public class Generator {
     public static void main(String[] args) throws IOException {
-        var root = new SourceRoot(Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/cocoa"));
+        var osPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/cocoa");
+        var commonPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/common");
+        var tooltipPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/emulated/tooltip");
+
+        var typeSolver = new CombinedTypeSolver();
+        typeSolver.add(new ReflectionTypeSolver());
+        typeSolver.add(new JavaParserTypeSolver(osPath));
+        typeSolver.add(new JavaParserTypeSolver(commonPath));
+        typeSolver.add(new JavaParserTypeSolver(tooltipPath));
+
+
+        var config = new ParserConfiguration()
+                .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_15)
+                .setSymbolResolver(new JavaSymbolSolver(typeSolver));
+
+        var root = new SourceRoot(osPath, config);
         root.tryToParse();
         root.getCompilationUnits().stream().forEach(source -> {
             var type = source.getPrimaryType().get();
@@ -112,11 +140,24 @@ public class Generator {
                             } else {
                                 methodSpec.addParameter(ObjectHandle.class, parameter.getNameAsString() + "Ref");
 
+
+                                System.out.println(targetObject + ": " + parameter.getName() + ": " + parameter.getTypeAsString());
+                                Class paramClass = null;
+                                if (!parameter.getType().getElementType().isPrimitiveType()) {
+                                    try {
+                                        paramClass = Class.forName(parameter.getType().getElementType().resolve().describe());
+                                    } catch (ClassNotFoundException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                } else {
+                                    paramClass = ClassName.get("", parameter.getType().getElementType().asString()).getClass();
+                                }
                                 //convert ObjectHandle to real type from global handles
-                                body.addStatement("var $L = handles.<$T>get($L)",
-                                        parameter.getNameAsString(),
-                                        ClassName.get("", parameter.getTypeAsString()),
-                                        parameter.getNameAsString() + "Ref");
+                                    body.addStatement("var $L = handles.<$T>get($L)",
+                                            parameter.getNameAsString(),
+                                            paramClass,
+                                            parameter.getNameAsString() + "Ref");
+
 
                                 returnParams.add(parameter.getNameAsString());
                             }
