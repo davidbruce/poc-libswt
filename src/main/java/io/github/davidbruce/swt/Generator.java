@@ -15,6 +15,8 @@ import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 import javax.lang.model.element.Modifier;
 
@@ -25,6 +27,7 @@ import org.graalvm.nativeimage.c.function.CEntryPoint;
 import org.graalvm.nativeimage.c.type.CCharPointer;
 import org.graalvm.nativeimage.c.type.CCharPointerPointer;
 import org.graalvm.nativeimage.c.type.CTypeConversion;
+import org.graalvm.word.UnsignedWord;
 
 public class Generator {
     public static void main(String[] args) throws IOException {
@@ -88,11 +91,26 @@ public class Generator {
                                 targetObject + "Ref");
 
                         //set parameters
+                        var returnParams = new ArrayList<String>();
                         method.getParameters().forEach(parameter -> {
                             if (parameter.getTypeAsString().equals("String")) {
                                 methodSpec.addParameter(CCharPointer.class, parameter.getNameAsString());
+                                returnParams.add(MessageFormat.format("CTypeConversion.toJavaString({0})", parameter.getNameAsString()));
+                            } else if (parameter.getTypeAsString().equals("String[]"))  {
+                                var param = parameter.getNameAsString() + "PtrPtr";
+                                methodSpec.addParameter(CCharPointerPointer.class, param);
+                                var lengthParam = parameter.getNameAsString() + "Length";
+                                methodSpec.addParameter(int.class, lengthParam);
+
+                                body.addStatement("var $L = new String[$L]", parameter.getNameAsString(), lengthParam);
+                                body.beginControlFlow("for (int i = 0; i < $L; i++)", lengthParam);
+                                body.addStatement("$L[i] = $L.read(i)", parameter.getNameAsString(), param);
+                                body.endControlFlow();
+
+                                returnParams.add(parameter.getNameAsString());
                             } else if (parameter.getType().isPrimitiveType()) {
                                 methodSpec.addParameter(ClassName.get("", parameter.getTypeAsString()), parameter.getNameAsString());
+                                returnParams.add(parameter.getNameAsString());
                             } else {
                                 methodSpec.addParameter(ObjectHandle.class, parameter.getNameAsString() + "Ref");
 
@@ -101,19 +119,16 @@ public class Generator {
                                         parameter.getNameAsString(),
                                         ClassName.get("", parameter.getTypeAsString()),
                                         parameter.getNameAsString() + "Ref");
+
+                                returnParams.add(parameter.getNameAsString());
                             }
                         });
 
-//                        if (returningHandle) {
-//
-//                            var handle = handles.create(new org.eclipse.swt.widgets.Display());
-//                            body.addStatement()
-//                        }
                         //call method on object with parameters from global handles
                         body.addStatement(returnWrapper,
                                 targetObject,
                                 method.getNameAsString(),
-                                method.getParameters().stream().map(Parameter::getNameAsString).collect(Collectors.joining(", ")
+                                returnParams.stream().collect(Collectors.joining(", ")
                         ));
 
                         methodSpec.addCode(body.build());

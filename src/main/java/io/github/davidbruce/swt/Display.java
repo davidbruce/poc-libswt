@@ -4,11 +4,12 @@ import org.graalvm.nativeimage.IsolateThread;
 import org.graalvm.nativeimage.ObjectHandle;
 import org.graalvm.nativeimage.ObjectHandles;
 import org.graalvm.nativeimage.c.function.CEntryPoint;
+import org.graalvm.nativeimage.c.type.CCharPointerPointer;
 import org.graalvm.nativeimage.c.type.CTypeConversion;
 
 public final class Display {
   @CEntryPoint(name="create_display")
-  public static ObjectHandle createDisplay(IsolateThread thread) {
+  public static ObjectHandle createDisplay(IsolateThread thread, CCharPointerPointer test) {
     var handles = ObjectHandles.getGlobal();
     var handle = handles.create(new org.eclipse.swt.widgets.Display());
     System.out.println(handle.rawValue());
