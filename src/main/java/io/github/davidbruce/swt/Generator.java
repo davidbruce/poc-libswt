@@ -143,9 +143,15 @@ public class Generator {
 
                                 System.out.println(targetObject + ": " + parameter.getName() + ": " + parameter.getTypeAsString());
                                 Class paramClass = null;
+                                var types = "$T";
                                 if (!parameter.getType().getElementType().isPrimitiveType()) {
                                     try {
-                                        paramClass = Class.forName(parameter.getType().getElementType().resolve().describe());
+//                                        if (parameter.getType().asClassOrInterfaceType().getTypeArguments().isEmpty()) {
+                                            paramClass = Class.forName(parameter.getType().getElementType().resolve().describe());
+//                                        } else {
+//                                            var typeArguments = parameter.getType().asClassOrInterfaceType().getTypeArguments().get();
+//                                            paramClass = Class.forName(parameter.getType().asClassOrInterfaceType().removeTypeArguments().resolve().describe());
+//                                        }
                                     } catch (ClassNotFoundException e) {
                                         throw new RuntimeException(e);
                                     }
@@ -153,7 +159,7 @@ public class Generator {
                                     paramClass = ClassName.get("", parameter.getType().getElementType().asString()).getClass();
                                 }
                                 //convert ObjectHandle to real type from global handles
-                                    body.addStatement("var $L = handles.<$T>get($L)",
+                                    body.addStatement(MessageFormat.format("var $L = handles.<{0}>get($L)", types),
                                             parameter.getNameAsString(),
                                             paramClass,
                                             parameter.getNameAsString() + "Ref");
