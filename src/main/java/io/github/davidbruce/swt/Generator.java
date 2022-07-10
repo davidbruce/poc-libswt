@@ -63,12 +63,12 @@ public class Generator {
                                 .addParameter(ObjectHandle.class, targetObject + "Ref");
 
                         //set return type
-                        var returnWrapper = "return $L.$L($L)";
+                        var returnWrapper = "return $L.$L($L);";
                         if (method.getTypeAsString().equals("boolean")) {
-                            returnWrapper = "return toCBoolean($L.$L($L))";
+                            returnWrapper = "return toCBoolean($L.$L($L));";
                             methodSpec.returns(TypeName.BYTE);
                         } else if (method.getTypeAsString().equals("void")) {
-                            returnWrapper = "$L.$L($L)";
+                            returnWrapper = "$L.$L($L);";
                             methodSpec.returns(TypeName.VOID);
                         } else if (method.getTypeAsString().equals("String")) {
                             returnWrapper = "try (var result = toCString($L.$L($L))) { return result.get(); }";
@@ -79,7 +79,7 @@ public class Generator {
                         } else if (method.getType().isPrimitiveType()) {
                             methodSpec.returns(ClassName.get("", method.getTypeAsString()));
                         } else {
-                            returnWrapper = "return handles.create($L.$L($L))";
+                            returnWrapper = "return handles.create($L.$L($L));";
                             methodSpec.returns(ObjectHandle.class);
                         }
 
