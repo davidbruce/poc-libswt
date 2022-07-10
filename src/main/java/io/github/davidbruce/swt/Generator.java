@@ -1,16 +1,14 @@
 package io.github.davidbruce.swt;
 
 import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ast.ImportDeclaration;
+import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
-import com.github.javaparser.symbolsolver.resolution.SymbolSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
-import com.github.javaparser.utils.ParserCollectionStrategy;
 import com.github.javaparser.utils.SourceRoot;
 import com.google.common.base.CaseFormat;
-import com.google.common.reflect.ClassPath;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -21,16 +19,13 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.instrument.Instrumentation;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.lang.model.element.Modifier;
 
 import org.graalvm.nativeimage.IsolateThread;
@@ -142,27 +137,16 @@ public class Generator {
 
 
                                 System.out.println(targetObject + ": " + parameter.getName() + ": " + parameter.getTypeAsString());
-                                Class paramClass = null;
-                                var types = "$T";
-                                if (!parameter.getType().getElementType().isPrimitiveType()) {
-                                    try {
-//                                        if (parameter.getType().asClassOrInterfaceType().getTypeArguments().isEmpty()) {
-                                            paramClass = Class.forName(parameter.getType().getElementType().resolve().describe());
-//                                        } else {
-//                                            var typeArguments = parameter.getType().asClassOrInterfaceType().getTypeArguments().get();
-//                                            paramClass = Class.forName(parameter.getType().asClassOrInterfaceType().removeTypeArguments().resolve().describe());
-//                                        }
-                                    } catch (ClassNotFoundException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                } else {
-                                    paramClass = ClassName.get("", parameter.getType().getElementType().asString()).getClass();
-                                }
+                                var statementArgs = new ArrayList<Object>();
+                                statementArgs.add(parameter.getNameAsString());
+                                var types = new ArrayList<String>();
+
+                                populateStatementArgs(parameter.getType(), statementArgs, types);
+
+                                statementArgs.add(parameter.getNameAsString() + "Ref");
                                 //convert ObjectHandle to real type from global handles
-                                    body.addStatement(MessageFormat.format("var $L = handles.<{0}>get($L)", types),
-                                            parameter.getNameAsString(),
-                                            paramClass,
-                                            parameter.getNameAsString() + "Ref");
+                                    body.addStatement(MessageFormat.format("var $L = handles.<{0}>get($L)", types.stream().collect(Collectors.joining(", ")).replace("<,", "<").replace(">,",">")),
+                                            statementArgs.toArray());
 
 
                                 returnParams.add(parameter.getNameAsString());
@@ -191,6 +175,32 @@ public class Generator {
             }
         });
     }
+
+    private static void populateStatementArgs(Type type, ArrayList<Object> statementArgs, ArrayList<String> types) {
+        types.add("$T");
+        if (!type.getElementType().isPrimitiveType()) {
+            try {
+                if (type.getElementType().asClassOrInterfaceType().getTypeArguments().isEmpty()) {
+                    statementArgs.add(Class.forName(type.getElementType().resolve().describe()));
+                } else {
+                    //this needs to be a loop
+                    statementArgs.add(Class.forName(type.asClassOrInterfaceType().removeTypeArguments().resolve().describe()));
+                    var typeArgumentsOptional = type.asClassOrInterfaceType().getTypeArguments();
+                    if (typeArgumentsOptional.isPresent()) {
+                        var typeArguments = typeArgumentsOptional.get();
+                        types.add("<");
+                        typeArguments.stream().forEach(typeArgument -> populateStatementArgs(typeArgument, statementArgs, types));
+                        types.add(">");
+                    }
+                }
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            statementArgs.add(ClassName.get("", type.getElementType().asString()).getClass());
+        }
+    }
+
     private static String UpperCamelToLowerCamelCase(String input) {
         String pattern = "([A-Z]+.)";
         Pattern r = Pattern.compile(pattern);
