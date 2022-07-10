@@ -65,16 +65,16 @@ public class Generator {
                         //set return type
                         var returnWrapper = "return $L.$L($L)";
                         if (method.getTypeAsString().equals("boolean")) {
-                            returnWrapper = "return CTypeConversion.toCBoolean($L.$L($L))";
+                            returnWrapper = "return toCBoolean($L.$L($L))";
                             methodSpec.returns(TypeName.BYTE);
                         } else if (method.getTypeAsString().equals("void")) {
                             returnWrapper = "$L.$L($L)";
                             methodSpec.returns(TypeName.VOID);
                         } else if (method.getTypeAsString().equals("String")) {
-                            returnWrapper = "return CTypeConversion.toCString($L.$L($L))";
+                            returnWrapper = "try (var result = toCString($L.$L($L))) { return result.get(); }";
                             methodSpec.returns(CCharPointer.class);
                         } else if (method.getTypeAsString().equals("String[]")) {
-                            returnWrapper = "return CTypeConversion.toCStrings($L.$L($L))";
+                            returnWrapper = "try (var result = toCStrings($L.$L($L))) { return result.get(); }";
                             methodSpec.returns(CCharPointerPointer.class);
                         } else if (method.getType().isPrimitiveType()) {
                             methodSpec.returns(ClassName.get("", method.getTypeAsString()));
@@ -95,7 +95,7 @@ public class Generator {
                         method.getParameters().forEach(parameter -> {
                             if (parameter.getTypeAsString().equals("String")) {
                                 methodSpec.addParameter(CCharPointer.class, parameter.getNameAsString());
-                                returnParams.add(MessageFormat.format("CTypeConversion.toJavaString({0})", parameter.getNameAsString()));
+                                returnParams.add(MessageFormat.format("toJavaString({0})", parameter.getNameAsString()));
                             } else if (parameter.getTypeAsString().equals("String[]"))  {
                                 var param = parameter.getNameAsString() + "PtrPtr";
                                 methodSpec.addParameter(CCharPointerPointer.class, param);
@@ -125,7 +125,7 @@ public class Generator {
                         });
 
                         //call method on object with parameters from global handles
-                        body.addStatement(returnWrapper,
+                        body.add(returnWrapper,
                                 targetObject,
                                 method.getNameAsString(),
                                 returnParams.stream().collect(Collectors.joining(", ")
@@ -136,6 +136,7 @@ public class Generator {
                     });
 
             var javaFile = JavaFile.builder("org.eclipse.graalvm.swt", classSpec.build())
+                    .addStaticImport(ClassName.get("org.graalvm.nativeimage.c.type", "CTypeConversion"), "*")
                     .build();
 
             try {
