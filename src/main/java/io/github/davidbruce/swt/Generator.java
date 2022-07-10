@@ -1,6 +1,5 @@
 package io.github.davidbruce.swt;
 
-import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.utils.SourceRoot;
 import com.google.common.base.CaseFormat;
 import com.squareup.javapoet.AnnotationSpec;
@@ -16,7 +15,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.lang.model.element.Modifier;
 
@@ -26,8 +26,6 @@ import org.graalvm.nativeimage.ObjectHandles;
 import org.graalvm.nativeimage.c.function.CEntryPoint;
 import org.graalvm.nativeimage.c.type.CCharPointer;
 import org.graalvm.nativeimage.c.type.CCharPointerPointer;
-import org.graalvm.nativeimage.c.type.CTypeConversion;
-import org.graalvm.word.UnsignedWord;
 
 public class Generator {
     public static void main(String[] args) throws IOException {
@@ -48,10 +46,10 @@ public class Generator {
                     .stream()
                     .filter(method -> method.isPublic() && !method.isStatic() && !method.isGeneric())
                     .forEach(method -> {
-                        var targetObject = CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, typeName);
+                        var targetObject = UpperCamelToLowerCamelCase(typeName);
                         var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
                                 .addMember("name", MessageFormat.format("\"{0}_{1}\"",
-                                                targetObject,
+                                                targetObject.toLowerCase(),
                                                 CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method.getNameAsString()))
                                 )
                                 .build();
@@ -145,5 +143,26 @@ public class Generator {
                 throw new RuntimeException(e);
             }
         });
+    }
+    private static String UpperCamelToLowerCamelCase(String input) {
+        String pattern = "([A-Z]+.)";
+        Pattern r = Pattern.compile(pattern);
+
+        Matcher m = r.matcher(input);
+        var result = input;
+        m.find();
+        if (m.group().equals(input)) {
+            result = result.toLowerCase();
+        } else {
+            if (m.group().length() > 2) {
+                var start = m.group().substring(0, m.group().length() - 2);
+                var middle = m.group().substring(m.group().length() - 2, m.group().length());
+                var end = result.split(m.group())[1];
+                result = start.toLowerCase() + middle + end;
+            } else {
+                result = m.group().toLowerCase() + result.split(m.group())[1];
+            }
+        }
+        return result;
     }
 }
