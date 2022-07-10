@@ -23,6 +23,8 @@ import org.graalvm.nativeimage.ObjectHandle;
 import org.graalvm.nativeimage.ObjectHandles;
 import org.graalvm.nativeimage.c.function.CEntryPoint;
 import org.graalvm.nativeimage.c.type.CCharPointer;
+import org.graalvm.nativeimage.c.type.CCharPointerPointer;
+import org.graalvm.nativeimage.c.type.CTypeConversion;
 
 public class Generator {
     public static void main(String[] args) throws IOException {
@@ -58,26 +60,32 @@ public class Generator {
                                 .addParameter(ObjectHandle.class, targetObject + "Ref");
 
                         //set return type
-                        var isVoid = false;
+                        var returnWrapper = "return $L.$L($L)";
                         if (method.getTypeAsString().equals("boolean")) {
+                            returnWrapper = "return CTypeConversion.toCBoolean($L.$L($L))";
                             methodSpec.returns(TypeName.BYTE);
                         } else if (method.getTypeAsString().equals("void")) {
-                            isVoid = true;
+                            returnWrapper = "$L.$L($L)";
                             methodSpec.returns(TypeName.VOID);
                         } else if (method.getTypeAsString().equals("String")) {
+                            returnWrapper = "return CTypeConversion.toCString($L.$L($L))";
                             methodSpec.returns(CCharPointer.class);
+                        } else if (method.getTypeAsString().equals("String[]")) {
+                            returnWrapper = "return CTypeConversion.toCStrings($L.$L($L))";
+                            methodSpec.returns(CCharPointerPointer.class);
                         } else if (method.getType().isPrimitiveType()) {
                             methodSpec.returns(ClassName.get("", method.getTypeAsString()));
                         } else {
+                            returnWrapper = "return handles.create($L.$L($L))";
                             methodSpec.returns(ObjectHandle.class);
                         }
 
                         //Get target object from global handles
                         var body = CodeBlock.builder();
-                        body.add(MessageFormat.format("var {0} = handles.<{1}>get({2});\n",
+                        body.addStatement("var $L = handles.<$T>get($L)",
                                 targetObject,
-                                typeName,
-                                targetObject + "Ref"));
+                                ClassName.get(source.getPackageDeclaration().get().getNameAsString(), typeName),
+                                targetObject + "Ref");
 
                         //set parameters
                         method.getParameters().forEach(parameter -> {
@@ -89,19 +97,23 @@ public class Generator {
                                 methodSpec.addParameter(ObjectHandle.class, parameter.getNameAsString() + "Ref");
 
                                 //convert ObjectHandle to real type from global handles
-                                body.add(MessageFormat.format("var {0} = handles.<{1}>get({2});\n",
+                                body.addStatement("var $L = handles.<$T>get($L)",
                                         parameter.getNameAsString(),
-                                        parameter.getTypeAsString(),
-                                        parameter.getNameAsString() + "Ref"));
+                                        ClassName.get("", parameter.getTypeAsString()),
+                                        parameter.getNameAsString() + "Ref");
                             }
                         });
 
+//                        if (returningHandle) {
+//
+//                            var handle = handles.create(new org.eclipse.swt.widgets.Display());
+//                            body.addStatement()
+//                        }
                         //call method on object with parameters from global handles
-                        body.add(MessageFormat.format("{0}{1}.{2}({3});\n",
-                                isVoid ? "" : "return ",
+                        body.addStatement(returnWrapper,
                                 targetObject,
                                 method.getNameAsString(),
-                                method.getParameters().stream().map(Parameter::getNameAsString).collect(Collectors.joining(", "))
+                                method.getParameters().stream().map(Parameter::getNameAsString).collect(Collectors.joining(", ")
                         ));
 
                         methodSpec.addCode(body.build());
