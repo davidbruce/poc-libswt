@@ -1,7 +1,6 @@
 package io.github.davidbruce.swt;
 
 import com.github.javaparser.ParserConfiguration;
-import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
@@ -25,7 +24,6 @@ import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import javax.lang.model.element.Modifier;
 
 import org.graalvm.nativeimage.IsolateThread;
@@ -42,7 +40,7 @@ public class Generator {
         var tooltipPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/emulated/tooltip");
 
         var typeSolver = new CombinedTypeSolver();
-        typeSolver.add(new ReflectionTypeSolver());
+        typeSolver.add(new ReflectionTypeSolver(false));
         typeSolver.add(new JavaParserTypeSolver(osPath));
         typeSolver.add(new JavaParserTypeSolver(commonPath));
         typeSolver.add(new JavaParserTypeSolver(tooltipPath));
@@ -145,7 +143,7 @@ public class Generator {
 
                                 statementArgs.add(parameter.getNameAsString() + "Ref");
                                 //convert ObjectHandle to real type from global handles
-                                    body.addStatement(MessageFormat.format("var $L = handles.<{0}>get($L)", types.stream().collect(Collectors.joining(", ")).replace("<,", "<").replace(">,",">")),
+                                    body.addStatement(MessageFormat.format("var $L = handles.<{0}>get($L)", types.stream().collect(Collectors.joining(""))),
                                             statementArgs.toArray());
 
 
@@ -184,13 +182,16 @@ public class Generator {
                     statementArgs.add(Class.forName(type.getElementType().resolve().describe()));
                 } else {
                     //this needs to be a loop
-                    statementArgs.add(Class.forName(type.asClassOrInterfaceType().removeTypeArguments().resolve().describe()));
+                    var typeCopy = type.clone().asClassOrInterfaceType();
+                    typeCopy.setParentNode(type.getParentNode().get());
+                    typeCopy.removeTypeArguments();
+                    statementArgs.add(Class.forName(typeCopy.resolve().describe()));
                     var typeArgumentsOptional = type.asClassOrInterfaceType().getTypeArguments();
                     if (typeArgumentsOptional.isPresent()) {
                         var typeArguments = typeArgumentsOptional.get();
-                        types.add("<");
-                        typeArguments.stream().forEach(typeArgument -> populateStatementArgs(typeArgument, statementArgs, types));
-                        types.add(">");
+                        var argumentsList = new ArrayList<String>();
+                        typeArguments.stream().forEach(typeArgument -> populateStatementArgs(typeArgument, statementArgs, argumentsList));
+                        types.add(MessageFormat.format("<{0}>", argumentsList.stream().collect(Collectors.joining(","))));
                     }
                 }
             } catch (ClassNotFoundException e) {
