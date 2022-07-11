@@ -35,6 +35,15 @@ import org.graalvm.nativeimage.c.type.CCharPointerPointer;
 
 public class Generator {
     public static void main(String[] args) throws IOException {
+        //TODO: Each ObjectHandler should be replaced with a properly named private interface that
+        //TODO: Fix non primitive arrays not being cast properly with handlers get method
+        //
+        //  public void setRGBs(IsolateThread thread, ObjectHandle colorDialogRef, ObjectHandle rgbsRef) {
+        //    var colorDialog = handles.<ColorDialog>get(colorDialogRef);
+        //    var rgbs = handles.<RGB>get(rgbsRef); <----------- This should be handles.get<RGB[]>get(rgbsRef);
+        //    colorDialog.setRGBs(rgbs);
+        //  }
+
         var osPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/cocoa");
         var commonPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/common");
         var tooltipPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/emulated/tooltip");
