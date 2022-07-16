@@ -1,6 +1,8 @@
 package io.github.davidbruce.swt;
 
 import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
@@ -35,15 +37,6 @@ import org.graalvm.nativeimage.c.type.CCharPointerPointer;
 
 public class Generator {
     public static void main(String[] args) throws IOException {
-        //TODO: Each ObjectHandler should be replaced with a properly named private interface that
-        //TODO: Fix non primitive arrays not being cast properly with handlers get method
-        //
-        //  public void setRGBs(IsolateThread thread, ObjectHandle colorDialogRef, ObjectHandle rgbsRef) {
-        //    var colorDialog = handles.<ColorDialog>get(colorDialogRef);
-        //    var rgbs = handles.<RGB>get(rgbsRef); <----------- This should be handles.get<RGB[]>get(rgbsRef);
-        //    colorDialog.setRGBs(rgbs);
-        //  }
-
         var osPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/cocoa");
         var commonPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/common");
         var tooltipPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/emulated/tooltip");
@@ -76,7 +69,7 @@ public class Generator {
                     .stream()
                     .filter(method -> method.isPublic() && !method.isStatic() && !method.isGeneric())
                     .forEach(method -> {
-                        var targetObject = UpperCamelToLowerCamelCase(typeName);
+                        var targetObject = UpperCamelToLowerCamelCase("Target" + typeName);
                         var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
                                 .addMember("name", MessageFormat.format("\"{0}_{1}\"",
                                                 targetObject.toLowerCase(),
@@ -84,32 +77,16 @@ public class Generator {
                                 )
                                 .build();
 
+
+                        var typeHandler = generateHandlerInterface(type.getNameAsString());
                         var methodSpec = MethodSpec.methodBuilder(method.getNameAsString())
                                 .addAnnotation(centryPoint)
                                 .addModifiers(Modifier.PUBLIC)
                                 .addParameter(IsolateThread.class, "thread")
-                                .addParameter(ObjectHandle.class, targetObject + "Ref");
+                                .addParameter(typeHandler, targetObject + "Ref");
 
                         //set return type
-                        var returnWrapper = "return $L.$L($L);";
-                        if (method.getTypeAsString().equals("boolean")) {
-                            returnWrapper = "return toCBoolean($L.$L($L));";
-                            methodSpec.returns(TypeName.BYTE);
-                        } else if (method.getTypeAsString().equals("void")) {
-                            returnWrapper = "$L.$L($L);";
-                            methodSpec.returns(TypeName.VOID);
-                        } else if (method.getTypeAsString().equals("String")) {
-                            returnWrapper = "try (var result = toCString($L.$L($L))) { return result.get(); }";
-                            methodSpec.returns(CCharPointer.class);
-                        } else if (method.getTypeAsString().equals("String[]")) {
-                            returnWrapper = "try (var result = toCStrings($L.$L($L))) { return result.get(); }";
-                            methodSpec.returns(CCharPointerPointer.class);
-                        } else if (method.getType().isPrimitiveType()) {
-                            methodSpec.returns(ClassName.get("", method.getTypeAsString()));
-                        } else {
-                            returnWrapper = "return handles.create($L.$L($L));";
-                            methodSpec.returns(ObjectHandle.class);
-                        }
+                        String returnWrapper = returnStatement(method, methodSpec);
 
                         //Get target object from global handles
                         var body = CodeBlock.builder();
@@ -119,46 +96,7 @@ public class Generator {
                                 targetObject + "Ref");
 
                         //set parameters
-                        var returnParams = new ArrayList<String>();
-                        method.getParameters().forEach(parameter -> {
-                            if (parameter.getTypeAsString().equals("String")) {
-                                methodSpec.addParameter(CCharPointer.class, parameter.getNameAsString());
-                                returnParams.add(MessageFormat.format("toJavaString({0})", parameter.getNameAsString()));
-                            } else if (parameter.getTypeAsString().equals("String[]"))  {
-                                var param = parameter.getNameAsString() + "PtrPtr";
-                                methodSpec.addParameter(CCharPointerPointer.class, param);
-                                var lengthParam = parameter.getNameAsString() + "Length";
-                                methodSpec.addParameter(int.class, lengthParam);
-
-                                body.addStatement("var $L = new String[$L]", parameter.getNameAsString(), lengthParam);
-                                body.beginControlFlow("for (int i = 0; i < $L; i++)", lengthParam);
-                                body.addStatement("$L[i] = $L.read(i)", parameter.getNameAsString(), param);
-                                body.endControlFlow();
-
-                                returnParams.add(parameter.getNameAsString());
-                            } else if (parameter.getType().isPrimitiveType()) {
-                                methodSpec.addParameter(ClassName.get("", parameter.getTypeAsString()), parameter.getNameAsString());
-                                returnParams.add(parameter.getNameAsString());
-                            } else {
-                                methodSpec.addParameter(ObjectHandle.class, parameter.getNameAsString() + "Ref");
-
-
-                                System.out.println(targetObject + ": " + parameter.getName() + ": " + parameter.getTypeAsString());
-                                var statementArgs = new ArrayList<Object>();
-                                statementArgs.add(parameter.getNameAsString());
-                                var types = new ArrayList<String>();
-
-                                populateStatementArgs(parameter.getType(), statementArgs, types);
-
-                                statementArgs.add(parameter.getNameAsString() + "Ref");
-                                //convert ObjectHandle to real type from global handles
-                                    body.addStatement(MessageFormat.format("var $L = handles.<{0}>get($L)", types.stream().collect(Collectors.joining(""))),
-                                            statementArgs.toArray());
-
-
-                                returnParams.add(parameter.getNameAsString());
-                            }
-                        });
+                        ArrayList<String> returnParams = methodParams(method, targetObject, methodSpec, body);
 
                         //call method on object with parameters from global handles
                         body.add(returnWrapper,
@@ -183,8 +121,109 @@ public class Generator {
         });
     }
 
+    private static ArrayList<String> methodParams(MethodDeclaration method, String targetObject, MethodSpec.Builder methodSpec, CodeBlock.Builder body) {
+        var returnParams = new ArrayList<String>();
+        method.getParameters().forEach(parameter -> {
+            if (parameter.getTypeAsString().equals("String")) {
+                methodSpec.addParameter(CCharPointer.class, parameter.getNameAsString());
+                returnParams.add(MessageFormat.format("toJavaString({0})", parameter.getNameAsString()));
+            } else if (parameter.getTypeAsString().equals("String[]"))  {
+                var param = parameter.getNameAsString() + "PtrPtr";
+                methodSpec.addParameter(CCharPointerPointer.class, param);
+                var lengthParam = parameter.getNameAsString() + "Length";
+                methodSpec.addParameter(int.class, lengthParam);
+
+                body.addStatement("var $L = new String[$L]", parameter.getNameAsString(), lengthParam);
+                body.beginControlFlow("for (int i = 0; i < $L; i++)", lengthParam);
+                body.addStatement("$L[i] = toJavaString($L.read(i))", parameter.getNameAsString(), param);
+                body.endControlFlow();
+
+                returnParams.add(parameter.getNameAsString());
+            } else if (parameter.getType().isPrimitiveType()) {
+                methodSpec.addParameter(ClassName.get("", parameter.getTypeAsString()), parameter.getNameAsString());
+                returnParams.add(parameter.getNameAsString());
+            } else {
+                javaClassParamHandler(targetObject, methodSpec, body, returnParams, parameter);
+            }
+        });
+        return returnParams;
+    }
+
+    private static void javaClassParamHandler(String targetObject, MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Parameter parameter) {
+        var clazz = ClassName.get(ObjectHandle.class);
+        if (!parameter.getTypeAsString().equals("Object")) {
+            clazz = generateHandlerInterface(parameter.getTypeAsString());
+        }
+
+        methodSpec.addParameter(clazz, parameter.getNameAsString() + "Ref");
+
+        System.out.println(targetObject + ": " + parameter.getName() + ": " + parameter.getTypeAsString());
+        var statementArgs = new ArrayList<Object>();
+        statementArgs.add(parameter.getNameAsString());
+        var types = new ArrayList<String>();
+
+        populateStatementArgs(parameter.getType(), statementArgs, types);
+
+        statementArgs.add(parameter.getNameAsString() + "Ref");
+        //convert ObjectHandle to real type from global handles
+        body.addStatement(MessageFormat.format("var $L = handles.<{0}>get($L)", types.stream().collect(Collectors.joining(""))),
+                statementArgs.toArray());
+
+
+        returnParams.add(parameter.getNameAsString());
+    }
+
+    private static ClassName generateHandlerInterface(String toGen) {
+        ClassName clazz;
+        var typeName = toGen + "Handler";
+        if (typeName.contains("[]")) typeName = typeName.replace("[]", "Array");
+        if (typeName.contains("<")) typeName = typeName.replaceAll("[<>]", "");
+
+        var type = TypeSpec.interfaceBuilder(typeName)
+                .addModifiers(Modifier.PUBLIC)
+                .addSuperinterface(ObjectHandle.class)
+                .build();
+
+        var javaFile = JavaFile.builder("org.eclipse.graalvm.swt.handlers", type).build();
+        try {
+            javaFile.writeTo(Path.of("./gen"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        clazz = ClassName.get("org.eclipse.graalvm.swt.handlers", type.name);
+        return clazz;
+    }
+
+    private static String returnStatement(MethodDeclaration method, MethodSpec.Builder methodSpec) {
+        var returnWrapper = "return $L.$L($L);";
+        if (method.getTypeAsString().equals("boolean")) {
+            returnWrapper = "return toCBoolean($L.$L($L));";
+            methodSpec.returns(TypeName.BYTE);
+        } else if (method.getTypeAsString().equals("void")) {
+            returnWrapper = "$L.$L($L);";
+            methodSpec.returns(TypeName.VOID);
+        } else if (method.getTypeAsString().equals("String")) {
+            returnWrapper = "try (var result = toCString($L.$L($L))) { return result.get(); }";
+            methodSpec.returns(CCharPointer.class);
+        } else if (method.getTypeAsString().equals("String[]")) {
+            returnWrapper = "try (var result = toCStrings($L.$L($L))) { return result.get(); }";
+            methodSpec.returns(CCharPointerPointer.class);
+        } else if (method.getType().isPrimitiveType()) {
+            methodSpec.returns(ClassName.get("", method.getTypeAsString()));
+        } else {
+            returnWrapper = "return handles.create($L.$L($L));";
+            methodSpec.returns(ObjectHandle.class);
+        }
+        return returnWrapper;
+    }
+
     private static void populateStatementArgs(Type type, ArrayList<Object> statementArgs, ArrayList<String> types) {
-        types.add("$T");
+        //TODO Deal with multi-dimensional arrays
+        if (type.isArrayType()) {
+            types.add("$T[]");
+        } else {
+            types.add("$T");
+        }
         if (!type.getElementType().isPrimitiveType()) {
             try {
                 if (type.getElementType().asClassOrInterfaceType().getTypeArguments().isEmpty()) {
@@ -207,7 +246,7 @@ public class Generator {
                 throw new RuntimeException(e);
             }
         } else {
-            statementArgs.add(ClassName.get("", type.getElementType().asString()).getClass());
+            statementArgs.add(ClassName.get("", type.getElementType().asString()));
         }
     }
 
