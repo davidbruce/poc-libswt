@@ -100,7 +100,7 @@ public class Generator {
                     .filter(method -> method.isPublic() && !method.isStatic() && !method.isGeneric())
                     .forEach(method -> {
                         var targetObject = upperCamelToLowerCamelCase(typeName);
-                        var targetObjectParam = targetObject + "TargetRef";
+                        var targetObjectParam = "_" + targetObject + "Ref";
                         var cName = MessageFormat.format("\"{0}_{1}\"",
                                         targetObject.toLowerCase(),
                                         CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method.getNameAsString()));
@@ -162,7 +162,7 @@ public class Generator {
 
     private static MethodSpec.Builder fieldMethods(CompilationUnit source, String typeName, FieldDeclaration field, FieldMethodType methodType) throws ClassNotFoundException {
         var targetObject = upperCamelToLowerCamelCase(typeName);
-        var targetObjectParam = targetObject + "TargetRef";
+        var targetObjectParam = "_" + targetObject + "Ref";
         var fieldName = field.getVariables().get(0).getNameAsString();
         var fieldType = field.getVariables().get(0).getType();
         var cName = MessageFormat.format("\"{0}_{1}\"",
