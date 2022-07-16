@@ -47,7 +47,6 @@ public class Generator {
         typeSolver.add(new JavaParserTypeSolver(commonPath));
         typeSolver.add(new JavaParserTypeSolver(tooltipPath));
 
-
         var config = new ParserConfiguration()
                 .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_15)
                 .setSymbolResolver(new JavaSymbolSolver(typeSolver));
@@ -69,7 +68,7 @@ public class Generator {
                     .stream()
                     .filter(method -> method.isPublic() && !method.isStatic() && !method.isGeneric())
                     .forEach(method -> {
-                        var targetObject = UpperCamelToLowerCamelCase("Target" + typeName);
+                        var targetObject = upperCamelToLowerCamelCase("Target" + typeName);
                         var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
                                 .addMember("name", MessageFormat.format("\"{0}_{1}\"",
                                                 targetObject.toLowerCase(),
@@ -250,7 +249,7 @@ public class Generator {
         }
     }
 
-    private static String UpperCamelToLowerCamelCase(String input) {
+    private static String upperCamelToLowerCamelCase(String input) {
         String pattern = "([A-Z]+.)";
         Pattern r = Pattern.compile(pattern);
 
