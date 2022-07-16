@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -37,6 +39,7 @@ import org.graalvm.nativeimage.c.type.CCharPointerPointer;
 
 public class Generator {
     public static void main(String[] args) throws IOException {
+        //TODO: Import parent class methods as well
         var osPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/cocoa");
         var commonPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/common");
         var tooltipPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/emulated/tooltip");
@@ -53,34 +56,46 @@ public class Generator {
 
         var root = new SourceRoot(osPath, config);
         root.tryToParse();
-        root.getCompilationUnits().stream().forEach(source -> {
+        var valid = Arrays.asList("Display", "Shell", "Button");
+        root.getCompilationUnits().stream().filter(unit -> valid.contains(unit.getPrimaryType().get().getNameAsString())).forEach(source -> {
             var type = source.getPrimaryType().get();
             var typeName = type.getNameAsString();
 
             var classSpec = TypeSpec.classBuilder(typeName + "Wrapper")
                     .addModifiers(Modifier.PUBLIC);
             var handlesField = FieldSpec.builder(ObjectHandles.class, "handles")
+                    .addModifiers(Modifier.STATIC)
                     .initializer("ObjectHandles.getGlobal()")
                     .build();
 
             classSpec.addField(handlesField);
+            //TODO this is a temporary solution for overloading, refactor to use variadic arguments
+            var centryPoints = new HashSet<String>();
             type.getMethods()
                     .stream()
                     .filter(method -> method.isPublic() && !method.isStatic() && !method.isGeneric())
                     .forEach(method -> {
-                        var targetObject = upperCamelToLowerCamelCase("Target" + typeName);
+                        var targetObject = upperCamelToLowerCamelCase(typeName);
+                        var cName = MessageFormat.format("\"{0}_{1}\"",
+                                        targetObject.toLowerCase(),
+                                        CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method.getNameAsString()));
+
+                        var i = 2;
+                        while (centryPoints.contains(cName)) cName = MessageFormat.format("\"{0}_{1}_{2}\"",
+                                targetObject.toLowerCase(),
+                                CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method.getNameAsString()),
+                                i++);
                         var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
-                                .addMember("name", MessageFormat.format("\"{0}_{1}\"",
-                                                targetObject.toLowerCase(),
-                                                CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method.getNameAsString()))
-                                )
+                                .addMember("name", cName)
                                 .build();
+                        centryPoints.add(cName);
+                        targetObject = targetObject + "TargetRed";
 
 
                         var typeHandler = generateHandlerInterface(type.getNameAsString());
                         var methodSpec = MethodSpec.methodBuilder(method.getNameAsString())
                                 .addAnnotation(centryPoint)
-                                .addModifiers(Modifier.PUBLIC)
+                                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
                                 .addParameter(IsolateThread.class, "thread")
                                 .addParameter(typeHandler, targetObject + "Ref");
 
