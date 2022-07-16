@@ -1,6 +1,8 @@
 package io.github.davidbruce.swt;
 
 import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.type.Type;
@@ -23,7 +25,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,8 +39,10 @@ import org.graalvm.nativeimage.c.type.CCharPointer;
 import org.graalvm.nativeimage.c.type.CCharPointerPointer;
 
 public class Generator {
+    private enum FieldMethodType { GETTER, SETTER }
     public static void main(String[] args) throws IOException {
         //TODO: Import parent class methods as well
+        //TODO: Look into CFunctionPointer for supporting callbacks
         var osPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/cocoa");
         var commonPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/common");
         var commonLayout = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/common/org/eclipse/swt/layout");
@@ -62,8 +65,6 @@ public class Generator {
     private static void processPath(Path osPath, ParserConfiguration config) throws IOException {
         var root = new SourceRoot(osPath, config);
         root.tryToParse();
-//        var valid = Arrays.asList("Display", "Shell", "Button");
-//        root.getCompilationUnits().stream().filter(unit -> valid.contains(unit.getPrimaryType().get().getNameAsString())).forEach(source -> {
         root.getCompilationUnits().stream().forEach(source -> {
             var type = source.getPrimaryType().get();
             var typeName = type.getNameAsString();
@@ -77,13 +78,20 @@ public class Generator {
 
             classSpec.addField(handlesField);
 
-//            type.getConstructors()
-//                    .stream()
-//                    .forEach(constructor -> {
-//                        constructor.getParameters()
-//                        var constructorSpec = MethodSpec.constructorBuilder();
-//
-//                    });
+            //process non-static fields
+            type.getFields()
+                    .stream()
+                    .filter(field -> field.isPublic() && !field.isStatic())
+                    .forEach(field -> {
+                        try {
+                            MethodSpec.Builder getter = fieldMethods(source, typeName, field, FieldMethodType.GETTER);
+                            classSpec.addMethod(getter.build());
+                            MethodSpec.Builder setter = fieldMethods(source, typeName, field, FieldMethodType.SETTER);
+                            classSpec.addMethod(setter.build());
+                        } catch (ClassNotFoundException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
 
             //TODO this is a temporary solution for overloading, refactor to use variadic arguments
             var centryPoints = new HashSet<String>();
@@ -92,6 +100,7 @@ public class Generator {
                     .filter(method -> method.isPublic() && !method.isStatic() && !method.isGeneric())
                     .forEach(method -> {
                         var targetObject = upperCamelToLowerCamelCase(typeName);
+                        var targetObjectParam = targetObject + "TargetRef";
                         var cName = MessageFormat.format("\"{0}_{1}\"",
                                         targetObject.toLowerCase(),
                                         CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method.getNameAsString()));
@@ -105,25 +114,25 @@ public class Generator {
                                 .addMember("name", cName)
                                 .build();
                         centryPoints.add(cName);
-                        targetObject = targetObject + "TargetRed";
 
 
-                        var typeHandler = generateHandlerInterface(type.getNameAsString());
+                        targetObject = "_" + targetObject;
+                        var typeHandler = generateHandlerInterface(typeName);
                         var methodSpec = MethodSpec.methodBuilder(method.getNameAsString())
                                 .addAnnotation(centryPoint)
                                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                                .addParameter(IsolateThread.class, "thread")
-                                .addParameter(typeHandler, targetObject + "Ref");
+                                .addParameter(IsolateThread.class, "_thread")
+                                .addParameter(typeHandler, targetObjectParam);
 
                         //set return type
-                        String returnWrapper = returnStatement(method, methodSpec);
+                        String returnWrapper = returnStatement(method.getType(), methodSpec, true);
 
                         //Get target object from global handles
                         var body = CodeBlock.builder();
                         body.addStatement("var $L = handles.<$T>get($L)",
                                 targetObject,
                                 ClassName.get(source.getPackageDeclaration().get().getNameAsString(), typeName),
-                                targetObject + "Ref");
+                                targetObjectParam);
 
                         //set parameters
                         ArrayList<String> returnParams = methodParams(method, targetObject, methodSpec, body);
@@ -151,56 +160,120 @@ public class Generator {
         });
     }
 
+    private static MethodSpec.Builder fieldMethods(CompilationUnit source, String typeName, FieldDeclaration field, FieldMethodType methodType) throws ClassNotFoundException {
+        var targetObject = upperCamelToLowerCamelCase(typeName);
+        var targetObjectParam = targetObject + "TargetRef";
+        var fieldName = field.getVariables().get(0).getNameAsString();
+        var fieldType = field.getVariables().get(0).getType();
+        var cName = MessageFormat.format("\"{0}_{1}\"",
+                targetObject.toLowerCase(),
+                CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE,
+                        methodType.equals(FieldMethodType.GETTER)
+                        ? fieldName
+                        : "assign_" + fieldName));
+
+        var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
+                .addMember("name", cName)
+                .build();
+
+        targetObject = "_" + targetObject;
+        var typeHandler = generateHandlerInterface(typeName);
+        var methodSpec = MethodSpec.methodBuilder(
+                    methodType.equals(FieldMethodType.GETTER)
+                    ? fieldName
+                    : "assign" + CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, fieldName))
+                .addAnnotation(centryPoint)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .addParameter(IsolateThread.class, "_thread")
+                .addParameter(typeHandler, targetObjectParam);
+
+
+        //Get target object from global handles
+        var body = CodeBlock.builder();
+        body.addStatement("var $L = handles.<$T>get($L)",
+                targetObject,
+                ClassName.get(source.getPackageDeclaration().get().getNameAsString(), typeName),
+                targetObjectParam);
+
+
+        if (methodType.equals(FieldMethodType.GETTER)) {
+            String returnWrapper = returnStatement(fieldType, methodSpec, false);
+
+            //call method on object with parameters from global handles
+            body.add(returnWrapper,
+                    targetObject,
+                    fieldName);
+        } else {
+            methodSpec.returns(TypeName.VOID);
+
+
+            var returnParams = new ArrayList<String>();
+            paramHandler(targetObject, methodSpec, body, returnParams, fieldType, fieldName);
+
+            body.addStatement("$L.$L = $L",
+                    targetObject,
+                    fieldName,
+                    returnParams.get(0));
+        }
+
+        methodSpec.addCode(body.build());
+        return methodSpec;
+    }
+
     private static ArrayList<String> methodParams(MethodDeclaration method, String targetObject, MethodSpec.Builder methodSpec, CodeBlock.Builder body) {
         var returnParams = new ArrayList<String>();
         method.getParameters().forEach(parameter -> {
-            if (parameter.getTypeAsString().equals("String")) {
-                methodSpec.addParameter(CCharPointer.class, parameter.getNameAsString());
-                returnParams.add(MessageFormat.format("toJavaString({0})", parameter.getNameAsString()));
-            } else if (parameter.getTypeAsString().equals("String[]"))  {
-                var param = parameter.getNameAsString() + "PtrPtr";
-                methodSpec.addParameter(CCharPointerPointer.class, param);
-                var lengthParam = parameter.getNameAsString() + "Length";
-                methodSpec.addParameter(int.class, lengthParam);
-
-                body.addStatement("var $L = new String[$L]", parameter.getNameAsString(), lengthParam);
-                body.beginControlFlow("for (int i = 0; i < $L; i++)", lengthParam);
-                body.addStatement("$L[i] = toJavaString($L.read(i))", parameter.getNameAsString(), param);
-                body.endControlFlow();
-
-                returnParams.add(parameter.getNameAsString());
-            } else if (parameter.getType().isPrimitiveType()) {
-                methodSpec.addParameter(ClassName.get("", parameter.getTypeAsString()), parameter.getNameAsString());
-                returnParams.add(parameter.getNameAsString());
-            } else {
-                javaClassParamHandler(targetObject, methodSpec, body, returnParams, parameter);
-            }
+            paramHandler(targetObject, methodSpec, body, returnParams, parameter.getType(), parameter.getNameAsString());
         });
         return returnParams;
     }
 
-    private static void javaClassParamHandler(String targetObject, MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Parameter parameter) {
+    private static void paramHandler(String targetObject, MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Type type, String paramName) {
+        if (type.asString().equals("String")) {
+            methodSpec.addParameter(CCharPointer.class, paramName);
+            returnParams.add(MessageFormat.format("toJavaString({0})", paramName));
+        } else if (type.asString().equals("String[]"))  {
+            var param = paramName + "PtrPtr";
+            methodSpec.addParameter(CCharPointerPointer.class, param);
+            var lengthParam = paramName + "Length";
+            methodSpec.addParameter(int.class, lengthParam);
+
+            body.addStatement("var $L = new String[$L]", paramName, lengthParam);
+            body.beginControlFlow("for (int i = 0; i < $L; i++)", lengthParam);
+            body.addStatement("$L[i] = toJavaString($L.read(i))", paramName, param);
+            body.endControlFlow();
+
+            returnParams.add(paramName);
+        } else if (type.isPrimitiveType()) {
+            methodSpec.addParameter(ClassName.get("", type.asString()), paramName);
+            returnParams.add(paramName);
+        } else {
+            javaClassParamHandler(targetObject, methodSpec, body, returnParams, type, paramName);
+        }
+    }
+
+    private static void javaClassParamHandler(String targetObject, MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Type type, String paramName) {
         var clazz = ClassName.get(ObjectHandle.class);
-        if (!parameter.getTypeAsString().equals("Object")) {
-            clazz = generateHandlerInterface(parameter.getTypeAsString());
+        if (!type.asString().equals("Object")) {
+            clazz = generateHandlerInterface(type.asString());
         }
 
-        methodSpec.addParameter(clazz, parameter.getNameAsString() + "Ref");
+        methodSpec.addParameter(clazz, paramName + "Ref");
 
-        System.out.println(targetObject + ": " + parameter.getName() + ": " + parameter.getTypeAsString());
+        System.out.println(targetObject + ": " + paramName + ": " + type.asString());
         var statementArgs = new ArrayList<Object>();
-        statementArgs.add(parameter.getNameAsString());
+        statementArgs.add(paramName);
         var types = new ArrayList<String>();
 
-        populateStatementArgs(parameter.getType(), statementArgs, types);
+        populateStatementArgs(type, statementArgs, types);
 
-        statementArgs.add(parameter.getNameAsString() + "Ref");
+        statementArgs.add(paramName + "Ref");
         //convert ObjectHandle to real type from global handles
         body.addStatement(MessageFormat.format("var $L = handles.<{0}>get($L)", types.stream().collect(Collectors.joining(""))),
                 statementArgs.toArray());
 
 
-        returnParams.add(parameter.getNameAsString());
+        returnParams.add(paramName);
     }
 
     private static ClassName generateHandlerInterface(String toGen) {
@@ -224,27 +297,27 @@ public class Generator {
         return clazz;
     }
 
-    private static String returnStatement(MethodDeclaration method, MethodSpec.Builder methodSpec) {
+    private static String returnStatement(Type type, MethodSpec.Builder methodSpec, boolean methodCall) {
         var returnWrapper = "return $L.$L($L);";
-        if (method.getTypeAsString().equals("boolean")) {
+        if (type.asString().equals("boolean")) {
             returnWrapper = "return toCBoolean($L.$L($L));";
             methodSpec.returns(TypeName.BYTE);
-        } else if (method.getTypeAsString().equals("void")) {
+        } else if (type.asString().equals("void")) {
             returnWrapper = "$L.$L($L);";
             methodSpec.returns(TypeName.VOID);
-        } else if (method.getTypeAsString().equals("String")) {
+        } else if (type.asString().equals("String")) {
             returnWrapper = "try (var result = toCString($L.$L($L))) { return result.get(); }";
             methodSpec.returns(CCharPointer.class);
-        } else if (method.getTypeAsString().equals("String[]")) {
+        } else if (type.asString().equals("String[]")) {
             returnWrapper = "try (var result = toCStrings($L.$L($L))) { return result.get(); }";
             methodSpec.returns(CCharPointerPointer.class);
-        } else if (method.getType().isPrimitiveType()) {
-            methodSpec.returns(ClassName.get("", method.getTypeAsString()));
+        } else if (type.isPrimitiveType()) {
+            methodSpec.returns(ClassName.get("", type.asString()));
         } else {
             returnWrapper = "return handles.create($L.$L($L));";
             methodSpec.returns(ObjectHandle.class);
         }
-        return returnWrapper;
+        return methodCall ? returnWrapper : returnWrapper.replace(".$L($L)", ".$L");
     }
 
     private static void populateStatementArgs(Type type, ArrayList<Object> statementArgs, ArrayList<String> types) {
