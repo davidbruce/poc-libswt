@@ -42,6 +42,7 @@ public class Generator {
         //TODO: Import parent class methods as well
         var osPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/cocoa");
         var commonPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/common");
+        var commonLayout = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/common/org/eclipse/swt/layout");
         var tooltipPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/emulated/tooltip");
 
         var typeSolver = new CombinedTypeSolver();
@@ -54,10 +55,16 @@ public class Generator {
                 .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_15)
                 .setSymbolResolver(new JavaSymbolSolver(typeSolver));
 
+        processPath(osPath, config);
+        processPath(commonLayout, config);
+    }
+
+    private static void processPath(Path osPath, ParserConfiguration config) throws IOException {
         var root = new SourceRoot(osPath, config);
         root.tryToParse();
-        var valid = Arrays.asList("Display", "Shell", "Button");
-        root.getCompilationUnits().stream().filter(unit -> valid.contains(unit.getPrimaryType().get().getNameAsString())).forEach(source -> {
+//        var valid = Arrays.asList("Display", "Shell", "Button");
+//        root.getCompilationUnits().stream().filter(unit -> valid.contains(unit.getPrimaryType().get().getNameAsString())).forEach(source -> {
+        root.getCompilationUnits().stream().forEach(source -> {
             var type = source.getPrimaryType().get();
             var typeName = type.getNameAsString();
 
@@ -69,6 +76,15 @@ public class Generator {
                     .build();
 
             classSpec.addField(handlesField);
+
+//            type.getConstructors()
+//                    .stream()
+//                    .forEach(constructor -> {
+//                        constructor.getParameters()
+//                        var constructorSpec = MethodSpec.constructorBuilder();
+//
+//                    });
+
             //TODO this is a temporary solution for overloading, refactor to use variadic arguments
             var centryPoints = new HashSet<String>();
             type.getMethods()
