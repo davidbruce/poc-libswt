@@ -2,9 +2,9 @@ package io.github.davidbruce.swt;
 
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
@@ -65,10 +65,15 @@ public class Generator {
     private static void processPath(Path osPath, ParserConfiguration config) throws IOException {
         var root = new SourceRoot(osPath, config);
         root.tryToParse();
-        root.getCompilationUnits().stream().forEach(source -> {
+        root.getCompilationUnits().stream()
+                .filter(source ->
+                        !source.getPrimaryType().get().asClassOrInterfaceDeclaration().isAbstract()
+                        && !source.getPrimaryType().get().asClassOrInterfaceDeclaration().isInterface())
+                .forEach(source -> {
             var type = source.getPrimaryType().get();
             var typeName = type.getNameAsString();
 
+            System.out.println("Generating Wrapper For: " +  typeName);
             var classSpec = TypeSpec.classBuilder(typeName + "Wrapper")
                     .addModifiers(Modifier.PUBLIC);
             var handlesField = FieldSpec.builder(ObjectHandles.class, "handles")
@@ -78,73 +83,44 @@ public class Generator {
 
             classSpec.addField(handlesField);
 
+
+            System.out.println("Wrapping Constructors");
+            var constructorCEntries = new HashSet<String>();
+            type.getConstructors()
+                    .stream()
+                    .filter(ConstructorDeclaration::isPublic)
+                    .forEach(constructor -> {
+                        var methodSpec = wrapConstructors(source, typeName, constructorCEntries, constructor);
+                        classSpec.addMethod(methodSpec.build());
+                    });
+
+            //TODO: process static fields
             //process non-static fields
+
+            System.out.println("Wrapping Fields");
             type.getFields()
                     .stream()
                     .filter(field -> field.isPublic() && !field.isStatic())
                     .forEach(field -> {
                         try {
-                            MethodSpec.Builder getter = fieldMethods(source, typeName, field, FieldMethodType.GETTER);
+                            MethodSpec.Builder getter = wrapFields(source, typeName, field, FieldMethodType.GETTER);
                             classSpec.addMethod(getter.build());
-                            MethodSpec.Builder setter = fieldMethods(source, typeName, field, FieldMethodType.SETTER);
+                            MethodSpec.Builder setter = wrapFields(source, typeName, field, FieldMethodType.SETTER);
                             classSpec.addMethod(setter.build());
                         } catch (ClassNotFoundException e) {
                             throw new RuntimeException(e);
                         }
                     });
 
+
+            System.out.println("Wrapping Methods");
             //TODO this is a temporary solution for overloading, refactor to use variadic arguments
-            var centryPoints = new HashSet<String>();
+            var methodCEntries = new HashSet<String>();
             type.getMethods()
                     .stream()
                     .filter(method -> method.isPublic() && !method.isStatic() && !method.isGeneric())
                     .forEach(method -> {
-                        var targetObject = upperCamelToLowerCamelCase(typeName);
-                        var targetObjectParam = "_" + targetObject + "Ref";
-                        var cName = MessageFormat.format("\"{0}_{1}\"",
-                                        targetObject.toLowerCase(),
-                                        CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method.getNameAsString()));
-
-                        var i = 2;
-                        while (centryPoints.contains(cName)) cName = MessageFormat.format("\"{0}_{1}_{2}\"",
-                                targetObject.toLowerCase(),
-                                CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method.getNameAsString()),
-                                i++);
-                        var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
-                                .addMember("name", cName)
-                                .build();
-                        centryPoints.add(cName);
-
-
-                        targetObject = "_" + targetObject;
-                        var typeHandler = generateHandlerInterface(typeName);
-                        var methodSpec = MethodSpec.methodBuilder(method.getNameAsString())
-                                .addAnnotation(centryPoint)
-                                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-                                .addParameter(IsolateThread.class, "_thread")
-                                .addParameter(typeHandler, targetObjectParam);
-
-                        //set return type
-                        String returnWrapper = returnStatement(method.getType(), methodSpec, true);
-
-                        //Get target object from global handles
-                        var body = CodeBlock.builder();
-                        body.addStatement("var $L = handles.<$T>get($L)",
-                                targetObject,
-                                ClassName.get(source.getPackageDeclaration().get().getNameAsString(), typeName),
-                                targetObjectParam);
-
-                        //set parameters
-                        ArrayList<String> returnParams = methodParams(method, targetObject, methodSpec, body);
-
-                        //call method on object with parameters from global handles
-                        body.add(returnWrapper,
-                                targetObject,
-                                method.getNameAsString(),
-                                returnParams.stream().collect(Collectors.joining(", ")
-                        ));
-
-                        methodSpec.addCode(body.build());
+                        MethodSpec.Builder methodSpec = wrapMethods(source, typeName, methodCEntries, method);
                         classSpec.addMethod(methodSpec.build());
                     });
 
@@ -160,7 +136,48 @@ public class Generator {
         });
     }
 
-    private static MethodSpec.Builder fieldMethods(CompilationUnit source, String typeName, FieldDeclaration field, FieldMethodType methodType) throws ClassNotFoundException {
+    private static MethodSpec.Builder wrapConstructors(CompilationUnit source, String typeName, HashSet<String> centryPoints, ConstructorDeclaration constructor) {
+        var targetObject = upperCamelToLowerCamelCase(typeName);
+        var targetObjectParam = "_" + targetObject + "Ref";
+        var cName = MessageFormat.format("\"new_{0}\"",
+                targetObject.toLowerCase());
+
+        var i = 2;
+        while (centryPoints.contains(cName)) cName = MessageFormat.format("\"new_{0}_{1}\"",
+                targetObject.toLowerCase(),
+                i++);
+        var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
+                .addMember("name", cName)
+                .build();
+        centryPoints.add(cName);
+
+        targetObject = "_" + targetObject;
+        var methodSpec = MethodSpec.methodBuilder("create" + typeName)
+                .addAnnotation(centryPoint)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .addParameter(IsolateThread.class, "_thread")
+                .returns(ObjectHandle.class);
+
+        //Get target object from global handles
+        var body = CodeBlock.builder();
+        //set parameters
+        var returnParams = new ArrayList<String>();
+
+        constructor.getParameters().forEach(parameter -> {
+            paramHandler(methodSpec, body, returnParams, parameter.getType(), parameter.getNameAsString());
+        });
+
+        //call method on object with parameters from global handles
+        body.addStatement("return handles.create(new $T($L))",
+                ClassName.get(source.getPackageDeclaration().get().getNameAsString(), typeName),
+                returnParams.stream().collect(Collectors.joining(", "))
+        );
+
+        methodSpec.addCode(body.build());
+        return methodSpec;
+    }
+
+    private static MethodSpec.Builder wrapFields(CompilationUnit source, String typeName, FieldDeclaration field, FieldMethodType methodType) throws ClassNotFoundException {
         var targetObject = upperCamelToLowerCamelCase(typeName);
         var targetObjectParam = "_" + targetObject + "Ref";
         var fieldName = field.getVariables().get(0).getNameAsString();
@@ -169,8 +186,8 @@ public class Generator {
                 targetObject.toLowerCase(),
                 CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE,
                         methodType.equals(FieldMethodType.GETTER)
-                        ? fieldName
-                        : "assign_" + fieldName));
+                                ? fieldName
+                                : "assign_" + fieldName));
 
         var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
                 .addMember("name", cName)
@@ -179,14 +196,13 @@ public class Generator {
         targetObject = "_" + targetObject;
         var typeHandler = generateHandlerInterface(typeName);
         var methodSpec = MethodSpec.methodBuilder(
-                    methodType.equals(FieldMethodType.GETTER)
-                    ? fieldName
-                    : "assign" + CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, fieldName))
+                        methodType.equals(FieldMethodType.GETTER)
+                                ? fieldName
+                                : "assign" + CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, fieldName))
                 .addAnnotation(centryPoint)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
                 .addParameter(IsolateThread.class, "_thread")
                 .addParameter(typeHandler, targetObjectParam);
-
 
         //Get target object from global handles
         var body = CodeBlock.builder();
@@ -194,7 +210,6 @@ public class Generator {
                 targetObject,
                 ClassName.get(source.getPackageDeclaration().get().getNameAsString(), typeName),
                 targetObjectParam);
-
 
         if (methodType.equals(FieldMethodType.GETTER)) {
             String returnWrapper = returnStatement(fieldType, methodSpec, false);
@@ -206,9 +221,8 @@ public class Generator {
         } else {
             methodSpec.returns(TypeName.VOID);
 
-
             var returnParams = new ArrayList<String>();
-            paramHandler(targetObject, methodSpec, body, returnParams, fieldType, fieldName);
+            paramHandler(methodSpec, body, returnParams, fieldType, fieldName);
 
             body.addStatement("$L.$L = $L",
                     targetObject,
@@ -220,15 +234,65 @@ public class Generator {
         return methodSpec;
     }
 
+    private static MethodSpec.Builder wrapMethods(CompilationUnit source, String typeName, HashSet<String> centryPoints, MethodDeclaration method) {
+        var targetObject = upperCamelToLowerCamelCase(typeName);
+        var targetObjectParam = "_" + targetObject + "Ref";
+        var cName = MessageFormat.format("\"{0}_{1}\"",
+                        targetObject.toLowerCase(),
+                        CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method.getNameAsString()));
+
+        var i = 2;
+        while (centryPoints.contains(cName)) cName = MessageFormat.format("\"{0}_{1}_{2}\"",
+                targetObject.toLowerCase(),
+                CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method.getNameAsString()),
+                i++);
+        var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
+                .addMember("name", cName)
+                .build();
+        centryPoints.add(cName);
+
+        targetObject = "_" + targetObject;
+        var typeHandler = generateHandlerInterface(typeName);
+        var methodSpec = MethodSpec.methodBuilder(method.getNameAsString())
+                .addAnnotation(centryPoint)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .addParameter(IsolateThread.class, "_thread")
+                .addParameter(typeHandler, targetObjectParam);
+
+        //set return type
+        String returnWrapper = returnStatement(method.getType(), methodSpec, true);
+
+        //Get target object from global handles
+        var body = CodeBlock.builder();
+        body.addStatement("var $L = handles.<$T>get($L)",
+                targetObject,
+                ClassName.get(source.getPackageDeclaration().get().getNameAsString(), typeName),
+                targetObjectParam);
+
+        //set parameters
+        ArrayList<String> returnParams = methodParams(method, targetObject, methodSpec, body);
+
+        //call method on object with parameters from global handles
+        body.add(returnWrapper,
+                targetObject,
+                method.getNameAsString(),
+                returnParams.stream().collect(Collectors.joining(", ")
+        ));
+
+        methodSpec.addCode(body.build());
+        return methodSpec;
+    }
+
     private static ArrayList<String> methodParams(MethodDeclaration method, String targetObject, MethodSpec.Builder methodSpec, CodeBlock.Builder body) {
+        //TODO: this method doesn't need to exist move lambda inline
         var returnParams = new ArrayList<String>();
         method.getParameters().forEach(parameter -> {
-            paramHandler(targetObject, methodSpec, body, returnParams, parameter.getType(), parameter.getNameAsString());
+            paramHandler(methodSpec, body, returnParams, parameter.getType(), parameter.getNameAsString());
         });
         return returnParams;
     }
 
-    private static void paramHandler(String targetObject, MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Type type, String paramName) {
+    private static void paramHandler(MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Type type, String paramName) {
         if (type.asString().equals("String")) {
             methodSpec.addParameter(CCharPointer.class, paramName);
             returnParams.add(MessageFormat.format("toJavaString({0})", paramName));
@@ -248,11 +312,11 @@ public class Generator {
             methodSpec.addParameter(ClassName.get("", type.asString()), paramName);
             returnParams.add(paramName);
         } else {
-            javaClassParamHandler(targetObject, methodSpec, body, returnParams, type, paramName);
+            javaClassParamHandler(methodSpec, body, returnParams, type, paramName);
         }
     }
 
-    private static void javaClassParamHandler(String targetObject, MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Type type, String paramName) {
+    private static void javaClassParamHandler(MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Type type, String paramName) {
         var clazz = ClassName.get(ObjectHandle.class);
         if (!type.asString().equals("Object")) {
             clazz = generateHandlerInterface(type.asString());
@@ -260,7 +324,6 @@ public class Generator {
 
         methodSpec.addParameter(clazz, paramName + "Ref");
 
-        System.out.println(targetObject + ": " + paramName + ": " + type.asString());
         var statementArgs = new ArrayList<Object>();
         statementArgs.add(paramName);
         var types = new ArrayList<String>();
