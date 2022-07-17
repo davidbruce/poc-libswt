@@ -66,9 +66,7 @@ public class Generator {
         var root = new SourceRoot(osPath, config);
         root.tryToParse();
         root.getCompilationUnits().stream()
-                .filter(source ->
-                        !source.getPrimaryType().get().asClassOrInterfaceDeclaration().isAbstract()
-                        && !source.getPrimaryType().get().asClassOrInterfaceDeclaration().isInterface())
+                .filter(source -> !source.getPrimaryType().get().asClassOrInterfaceDeclaration().isInterface())
                 .forEach(source -> {
             var type = source.getPrimaryType().get();
             var typeName = type.getNameAsString();
@@ -84,19 +82,20 @@ public class Generator {
             classSpec.addField(handlesField);
 
 
-            System.out.println("Wrapping Constructors");
-            var constructorCEntries = new HashSet<String>();
-            type.getConstructors()
-                    .stream()
-                    .filter(ConstructorDeclaration::isPublic)
-                    .forEach(constructor -> {
-                        var methodSpec = wrapConstructors(source, typeName, constructorCEntries, constructor);
-                        classSpec.addMethod(methodSpec.build());
-                    });
+            if (!type.asClassOrInterfaceDeclaration().isAbstract()) {
+                System.out.println("Wrapping Constructors");
+                var constructorCEntries = new HashSet<String>();
+                type.getConstructors()
+                        .stream()
+                        .filter(ConstructorDeclaration::isPublic)
+                        .forEach(constructor -> {
+                            var methodSpec = wrapConstructors(source, typeName, constructorCEntries, constructor);
+                            classSpec.addMethod(methodSpec.build());
+                        });
+            }
 
             //TODO: process static fields
             //process non-static fields
-
             System.out.println("Wrapping Fields");
             type.getFields()
                     .stream()
