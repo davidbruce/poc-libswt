@@ -4,17 +4,10 @@
 #include <string.h>
 
 
-int callback(graal_isolatethread_t* isolate_thread, void* event) {
+void callback(graal_isolatethread_t* isolate_thread, void* event) {
     void* button;
     button = event_widget(isolate_thread, event);
-    // printf("Clicked me!");
-    // char* text = button_get_text(isolate_thread, button);
- //   if (strcmp("Ya Clicked!", text)) {
-//	button_set_text(isolate_thread, button, "Click me!");
-    //} else {
 	button_set_text(isolate_thread, button, "Ya Clicked!");
-  //  }
-    return 0;
 }
 int main(void) {
     int ret;
