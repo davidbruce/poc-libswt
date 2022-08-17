@@ -5,7 +5,10 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
+import com.github.javaparser.resolution.MethodUsage;
+import com.github.javaparser.resolution.types.ResolvedType;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
@@ -18,6 +21,7 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
@@ -31,22 +35,61 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.lang.model.element.Modifier;
 
+import org.eclipse.swt.widgets.Listener;
 import org.graalvm.nativeimage.IsolateThread;
 import org.graalvm.nativeimage.ObjectHandle;
 import org.graalvm.nativeimage.ObjectHandles;
 import org.graalvm.nativeimage.c.function.CEntryPoint;
+import org.graalvm.nativeimage.c.function.CFunctionPointer;
+import org.graalvm.nativeimage.c.function.InvokeCFunctionPointer;
 import org.graalvm.nativeimage.c.type.CCharPointer;
 import org.graalvm.nativeimage.c.type.CCharPointerPointer;
+
+//if functional interface
+//create inner intreface called InterfaceNameCPtr
+//create @CEntryPoint
+//create default method
+
+//TODO: Support callbacks by checking if argument is functional interface
+// 1. create new CFunctionPointer interface for param
+// 2. Implement functional interface with lambda that calls callback with necessary handle creation and destruction
+//public interface ListenerCallback   {
+//    ObjectHandles handles = ObjectHandles.getGlobal();
+//    interface Handle extends ObjectHandle {}
+//    interface ListenerCPtr extends CFunctionPointer {
+//        @InvokeCFunctionPointer
+//        int invoke(IsolateThread thread, ObjectHandle e);
+//    }
+//    @CEntryPoint(
+//            name = "create_listener"
+//    )
+//    static ObjectHandle createListener(IsolateThread _thread, graalvm.handles.org.eclipse.swt.widgets.ListenerCallback.ListenerCPtr callback) {
+//        Listener listener = e -> {
+//            var handle = handles.create(e.widget);
+//            var x = callback.invoke(_thread, handle);
+//            System.out.println(x);
+//            handles.destroy(handle);
+//        };
+//        System.out.println("Hit createWidgetListener");
+//        return handles.create(listener);
+//    }
+//}
 
 public class Generator {
     private enum FieldMethodType { GETTER, SETTER }
     public static void main(String[] args) throws IOException {
         //TODO: Import parent class methods as well
         //TODO: Look into CFunctionPointer for supporting callbacks
-        var osPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/cocoa");
-        var commonPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/common");
-        var commonLayout = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/common/org/eclipse/swt/layout");
-        var tooltipPath = Path.of("./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/emulated/tooltip");
+        var basePath = "./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/";
+
+        //paths to parse
+        var osPath = Path.of(basePath + "cocoa");
+        var eventsPath = Path.of(basePath + "common/org/eclipse/swt/events");
+        var commonLayout = Path.of(basePath + "common/org/eclipse/swt/layout");
+
+        //solver paths
+        var commonPath = Path.of(basePath + "common");
+        var tooltipPath = Path.of(basePath+ "emulated/tooltip");
 
         var typeSolver = new CombinedTypeSolver();
         typeSolver.add(new ReflectionTypeSolver(false));
@@ -59,6 +102,7 @@ public class Generator {
                 .setSymbolResolver(new JavaSymbolSolver(typeSolver));
 
         processPath(osPath, config);
+        processPath(eventsPath, config);
         processPath(commonLayout, config);
     }
 
@@ -66,73 +110,73 @@ public class Generator {
         var root = new SourceRoot(osPath, config);
         root.tryToParse();
         root.getCompilationUnits().stream()
-                .filter(source -> !source.getPrimaryType().get().asClassOrInterfaceDeclaration().isInterface())
+//                .filter(source -> !source.getPrimaryType().get().asClassOrInterfaceDeclaration().isInterface())
                 .forEach(source -> {
-            var type = source.getPrimaryType().get();
-            var typeName = type.getNameAsString();
+                    var type = source.getPrimaryType().get();
+                    var typeName = type.getNameAsString();
 
-            System.out.println("Generating Wrapper For: " +  typeName);
-            var classSpec = TypeSpec.classBuilder(typeName + "Wrapper")
-                    .addModifiers(Modifier.PUBLIC);
-            var handlesField = FieldSpec.builder(ObjectHandles.class, "handles")
-                    .addModifiers(Modifier.STATIC)
-                    .initializer("ObjectHandles.getGlobal()")
-                    .build();
+                    System.out.println("Generating Wrapper For: " +  typeName);
+                    var classSpec = TypeSpec.classBuilder(typeName + "Wrapper")
+                            .addModifiers(Modifier.PUBLIC);
+                    var handlesField = FieldSpec.builder(ObjectHandles.class, "handles")
+                            .addModifiers(Modifier.STATIC)
+                            .initializer("ObjectHandles.getGlobal()")
+                            .build();
 
-            classSpec.addField(handlesField);
-
-
-            if (!type.asClassOrInterfaceDeclaration().isAbstract()) {
-                System.out.println("Wrapping Constructors");
-                var constructorCEntries = new HashSet<String>();
-                type.getConstructors()
-                        .stream()
-                        .filter(ConstructorDeclaration::isPublic)
-                        .forEach(constructor -> {
-                            var methodSpec = wrapConstructors(source, typeName, constructorCEntries, constructor);
-                            classSpec.addMethod(methodSpec.build());
-                        });
-            }
-
-            //TODO: process static fields
-            //process non-static fields
-            System.out.println("Wrapping Fields");
-            type.getFields()
-                    .stream()
-                    .filter(field -> field.isPublic() && !field.isStatic())
-                    .forEach(field -> {
-                        try {
-                            MethodSpec.Builder getter = wrapFields(source, typeName, field, FieldMethodType.GETTER);
-                            classSpec.addMethod(getter.build());
-                            MethodSpec.Builder setter = wrapFields(source, typeName, field, FieldMethodType.SETTER);
-                            classSpec.addMethod(setter.build());
-                        } catch (ClassNotFoundException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
+                    classSpec.addField(handlesField);
 
 
-            System.out.println("Wrapping Methods");
-            //TODO this is a temporary solution for overloading, refactor to use variadic arguments
-            var methodCEntries = new HashSet<String>();
-            type.getMethods()
-                    .stream()
-                    .filter(method -> method.isPublic() && !method.isStatic() && !method.isGeneric())
-                    .forEach(method -> {
-                        MethodSpec.Builder methodSpec = wrapMethods(source, typeName, methodCEntries, method);
-                        classSpec.addMethod(methodSpec.build());
-                    });
+                    if (!type.asClassOrInterfaceDeclaration().isAbstract()) {
+                        System.out.println("Wrapping Constructors");
+                        var constructorCEntries = new HashSet<String>();
+                        type.getConstructors()
+                                .stream()
+                                .filter(ConstructorDeclaration::isPublic)
+                                .forEach(constructor -> {
+                                    var methodSpec = wrapConstructors(source, typeName, constructorCEntries, constructor);
+                                    classSpec.addMethod(methodSpec.build());
+                                });
+                    }
 
-            var javaFile = JavaFile.builder("org.eclipse.graalvm.swt", classSpec.build())
-                    .addStaticImport(ClassName.get("org.graalvm.nativeimage.c.type", "CTypeConversion"), "*")
-                    .build();
+                    //TODO: process static fields
+                    //process non-static fields
+                    System.out.println("Wrapping Fields");
+                    type.getFields()
+                            .stream()
+                            .filter(field -> field.isPublic() && !field.isStatic())
+                            .forEach(field -> {
+                                try {
+                                    MethodSpec.Builder getter = wrapFields(source, typeName, field, FieldMethodType.GETTER);
+                                    classSpec.addMethod(getter.build());
+                                    MethodSpec.Builder setter = wrapFields(source, typeName, field, FieldMethodType.SETTER);
+                                    classSpec.addMethod(setter.build());
+                                } catch (ClassNotFoundException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            });
 
-            try {
-                javaFile.writeTo(Path.of("./gen"));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
+
+                    System.out.println("Wrapping Methods");
+                    //TODO this is a temporary solution for overloading, refactor to use variadic arguments
+                    var methodCEntries = new HashSet<String>();
+                    type.getMethods()
+                            .stream()
+                            .filter(method -> method.isPublic() && !method.isStatic() && !method.isGeneric())
+                            .forEach(method -> {
+                                MethodSpec.Builder methodSpec = wrapMethods(source, typeName, methodCEntries, method);
+                                classSpec.addMethod(methodSpec.build());
+                            });
+
+                    var javaFile = JavaFile.builder("graalvm." + type.resolve().getPackageName(), classSpec.build())
+                            .addStaticImport(ClassName.get("org.graalvm.nativeimage.c.type", "CTypeConversion"), "*")
+                            .build();
+
+                    try {
+                        javaFile.writeTo(Path.of("./gen"));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
     }
 
     private static MethodSpec.Builder wrapConstructors(CompilationUnit source, String typeName, HashSet<String> centryPoints, ConstructorDeclaration constructor) {
@@ -163,7 +207,7 @@ public class Generator {
         var returnParams = new ArrayList<String>();
 
         constructor.getParameters().forEach(parameter -> {
-            paramHandler(methodSpec, body, returnParams, parameter.getType(), parameter.getNameAsString());
+            paramProcessor(methodSpec, body, returnParams, parameter.getType(), parameter.getNameAsString());
         });
 
         //call method on object with parameters from global handles
@@ -193,7 +237,7 @@ public class Generator {
                 .build();
 
         targetObject = "_" + targetObject;
-        var typeHandler = generateHandlerInterface(typeName);
+        var typeHandle = generateInterfaceHandle(typeName, source.getPackageDeclaration().get().getNameAsString());
         var methodSpec = MethodSpec.methodBuilder(
                         methodType.equals(FieldMethodType.GETTER)
                                 ? fieldName
@@ -201,7 +245,7 @@ public class Generator {
                 .addAnnotation(centryPoint)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
                 .addParameter(IsolateThread.class, "_thread")
-                .addParameter(typeHandler, targetObjectParam);
+                .addParameter(typeHandle, targetObjectParam);
 
         //Get target object from global handles
         var body = CodeBlock.builder();
@@ -221,7 +265,7 @@ public class Generator {
             methodSpec.returns(TypeName.VOID);
 
             var returnParams = new ArrayList<String>();
-            paramHandler(methodSpec, body, returnParams, fieldType, fieldName);
+            paramProcessor(methodSpec, body, returnParams, fieldType, fieldName);
 
             body.addStatement("$L.$L = $L",
                     targetObject,
@@ -251,12 +295,12 @@ public class Generator {
         centryPoints.add(cName);
 
         targetObject = "_" + targetObject;
-        var typeHandler = generateHandlerInterface(typeName);
+        var typeHandle = generateInterfaceHandle(typeName, source.getPackageDeclaration().get().getNameAsString());
         var methodSpec = MethodSpec.methodBuilder(method.getNameAsString())
                 .addAnnotation(centryPoint)
                 .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
                 .addParameter(IsolateThread.class, "_thread")
-                .addParameter(typeHandler, targetObjectParam);
+                .addParameter(typeHandle, targetObjectParam);
 
         //set return type
         String returnWrapper = returnStatement(method.getType(), methodSpec, true);
@@ -286,12 +330,12 @@ public class Generator {
         //TODO: this method doesn't need to exist move lambda inline
         var returnParams = new ArrayList<String>();
         method.getParameters().forEach(parameter -> {
-            paramHandler(methodSpec, body, returnParams, parameter.getType(), parameter.getNameAsString());
+            paramProcessor(methodSpec, body, returnParams, parameter.getType(), parameter.getNameAsString());
         });
         return returnParams;
     }
 
-    private static void paramHandler(MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Type type, String paramName) {
+    private static void paramProcessor(MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Type type, String paramName) {
         if (type.asString().equals("String")) {
             methodSpec.addParameter(CCharPointer.class, paramName);
             returnParams.add(MessageFormat.format("toJavaString({0})", paramName));
@@ -311,14 +355,42 @@ public class Generator {
             methodSpec.addParameter(ClassName.get("", type.asString()), paramName);
             returnParams.add(paramName);
         } else {
-            javaClassParamHandler(methodSpec, body, returnParams, type, paramName);
+            javaClassParamProcessor(methodSpec, body, returnParams, type, paramName);
         }
     }
 
-    private static void javaClassParamHandler(MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Type type, String paramName) {
+    private static void javaClassParamProcessor(MethodSpec.Builder methodSpec, CodeBlock.Builder body, ArrayList<String> returnParams, Type type, String paramName) {
         var clazz = ClassName.get(ObjectHandle.class);
         if (!type.asString().equals("Object")) {
-            clazz = generateHandlerInterface(type.asString());
+            var typeName = type.asString();
+            var pkg = type.resolve().describe();
+            System.out.println(pkg);
+            if (type.getElementType().isPrimitiveType()) {
+                typeName = CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, typeName);
+                pkg = "primitives";
+                clazz = generateInterfaceHandle(typeName, pkg);
+            } else {
+                pkg = pkg.substring(0, pkg.lastIndexOf("."));
+
+                pkg = pkg.split("." + ((ClassOrInterfaceType) type.getElementType()).getName())[0];
+                //  Check if interface
+                try {
+                    var resolvedType = type.getElementType().resolve();
+                    var isInterface = Class.forName(resolvedType.describe()).isInterface();
+                    if (isInterface && resolvedType.asReferenceType().getDeclaredMethods().size() == 1) {
+                        var resolvedMethod  = resolvedType.asReferenceType().getDeclaredMethods().stream().findFirst().get();
+                        if (resolvedType.asReferenceType().getDeclaredMethods().stream().findFirst().get().returnType().isVoid()) {
+                            clazz = generateFunctionalInterfaceHandle(typeName, pkg, resolvedMethod);
+                        } else {
+                            clazz = generateInterfaceHandle(typeName, pkg);
+                        }
+                    } else {
+                        clazz = generateInterfaceHandle(typeName, pkg);
+                    }
+                } catch (ClassNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
 
         methodSpec.addParameter(clazz, paramName + "Ref");
@@ -338,9 +410,10 @@ public class Generator {
         returnParams.add(paramName);
     }
 
-    private static ClassName generateHandlerInterface(String toGen) {
+    private static ClassName generateInterfaceHandle(String name, String pkg) {
+        //TODO: Check if functional interface
         ClassName clazz;
-        var typeName = toGen + "Handler";
+        var typeName = name + "Handle";
         if (typeName.contains("[]")) typeName = typeName.replace("[]", "Array");
         if (typeName.contains("<")) typeName = typeName.replaceAll("[<>]", "");
 
@@ -349,13 +422,104 @@ public class Generator {
                 .addSuperinterface(ObjectHandle.class)
                 .build();
 
-        var javaFile = JavaFile.builder("org.eclipse.graalvm.swt.handlers", type).build();
+        var javaFile = JavaFile.builder("graalvm.handles." + pkg, type).build();
         try {
             javaFile.writeTo(Path.of("./gen"));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        clazz = ClassName.get("org.eclipse.graalvm.swt.handlers", type.name);
+        clazz = ClassName.get("graalvm.handles." + pkg, type.name);
+        return clazz;
+    }
+
+    private static ClassName generateFunctionalInterfaceHandle(String name, String pkg, MethodUsage resolvedMethod) {
+        ClassName clazz;
+        var typeName = name + "Callback";
+        if (typeName.contains("[]")) typeName = typeName.replace("[]", "Array");
+        if (typeName.contains("<")) typeName = typeName.replaceAll("[<>]", "");
+
+        var typeSpec = TypeSpec.interfaceBuilder(typeName)
+                .addModifiers(Modifier.PUBLIC);
+
+        var handlesField = FieldSpec.builder(ObjectHandles.class, "handles")
+                .addModifiers(Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC)
+                .initializer("ObjectHandles.getGlobal()")
+                .build();
+
+        typeSpec.addField(handlesField);
+
+        var handle = TypeSpec.interfaceBuilder("Handle")
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .addSuperinterface(ObjectHandle.class)
+                .build();
+        var cPtr = TypeSpec.interfaceBuilder("CCallbackPtr")
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .addSuperinterface(CFunctionPointer.class);
+
+        var invoke = MethodSpec.methodBuilder("invoke")
+                .addAnnotation(InvokeCFunctionPointer.class)
+                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                .addParameter(IsolateThread.class, "_thread");
+        if (resolvedMethod.getParamTypes().size() > 0) {
+            //TODO: this should change to a specific object handle
+                invoke.addParameter(ObjectHandle.class, "_handle");
+        }
+
+        cPtr.addMethod(invoke.build());
+
+        typeSpec.addType(handle);
+        typeSpec.addType(cPtr.build());
+
+        var cName = MessageFormat.format("\"create_{0}\"",
+                CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, upperCamelToLowerCamelCase(name)));
+
+        var centryPoint = AnnotationSpec.builder(CEntryPoint.class)
+                .addMember("name", cName)
+                .build();
+        var body = CodeBlock.builder();
+        //Not sure if invoke is blocking so there may be a call after free bug here
+        if (resolvedMethod.getParamTypes().size() == 0) {
+            body.add(
+                    """
+                    $L invokeCallback = () -> {
+                        callback.invoke(_thread);
+                    };
+                    return handles.create(invokeCallback);
+                    """
+                    , ClassName.get(pkg, name));
+        } else {
+            body.add(
+                    """
+                    $L invokeCallback = e -> {
+                        var handle = handles.create(e);
+                        callback.invoke(_thread, handle);
+                        handles.destroy(handle);
+                    };
+                    return handles.create(invokeCallback);
+                    """
+                    , ClassName.get(pkg, name));
+        }
+
+        var createCallback = MethodSpec.methodBuilder("create")
+                .addAnnotation(centryPoint)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .returns(ObjectHandle.class)
+                .addParameter(IsolateThread.class, "_thread")
+                .addParameter(ClassName.get("", "CCallbackPtr"), "callback")
+                .addCode(body.build())
+                .build();
+
+        typeSpec.addMethod(createCallback);
+
+        var type = typeSpec.build();
+        var javaFile = JavaFile.builder("graalvm.handles." + pkg, type).build();
+        try {
+            javaFile.writeTo(Path.of("./gen"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        var parent = ClassName.get("graalvm.handles." + pkg,type.name);
+        clazz = parent.nestedClass("Handle");
         return clazz;
     }
 
