@@ -10,6 +10,7 @@ import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.resolution.MethodUsage;
 import com.github.javaparser.resolution.types.ResolvedType;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
+import com.github.javaparser.symbolsolver.model.typesystem.ReferenceTypeImpl;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
@@ -376,7 +377,7 @@ public class Generator {
                 //  Check if interface
                 try {
                     var resolvedType = type.getElementType().resolve();
-                    var isInterface = Class.forName(resolvedType.describe()).isInterface();
+                    var isInterface = Class.forName(((ReferenceTypeImpl) resolvedType).getQualifiedName()).isInterface();
                     if (isInterface && resolvedType.asReferenceType().getDeclaredMethods().size() == 1) {
                         var resolvedMethod  = resolvedType.asReferenceType().getDeclaredMethods().stream().findFirst().get();
                         if (resolvedType.asReferenceType().getDeclaredMethods().stream().findFirst().get().returnType().isVoid()) {
