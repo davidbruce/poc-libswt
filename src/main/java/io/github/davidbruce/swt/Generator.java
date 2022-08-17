@@ -87,6 +87,7 @@ public class Generator {
         var osPath = Path.of(basePath + "cocoa");
         var eventsPath = Path.of(basePath + "common/org/eclipse/swt/events");
         var commonLayout = Path.of(basePath + "common/org/eclipse/swt/layout");
+        var commonWidgets = Path.of(basePath + "common/org/eclipse/swt/widgets");
 
         //solver paths
         var commonPath = Path.of(basePath + "common");
@@ -103,6 +104,7 @@ public class Generator {
                 .setSymbolResolver(new JavaSymbolSolver(typeSolver));
 
         processPath(osPath, config);
+        processPath(commonWidgets, config);
         processPath(eventsPath, config);
         processPath(commonLayout, config);
     }
@@ -111,6 +113,7 @@ public class Generator {
         var root = new SourceRoot(osPath, config);
         root.tryToParse();
         root.getCompilationUnits().stream()
+                .filter(source -> source.getPrimaryType().get().isPublic())
 //                .filter(source -> !source.getPrimaryType().get().asClassOrInterfaceDeclaration().isInterface())
                 .forEach(source -> {
                     var type = source.getPrimaryType().get();
@@ -596,7 +599,7 @@ public class Generator {
                 var end = result.split(m.group())[1];
                 result = start.toLowerCase() + middle + end;
             } else {
-                result = m.group().toLowerCase() + result.split(m.group())[1];
+                result = m.group().toLowerCase() + result.substring(m.group().length(), result.length());
             }
         }
         return result;
