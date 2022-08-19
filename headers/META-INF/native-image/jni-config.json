@@ -1,9 +1,5 @@
 [
 {
-  "name":"io.github.davidbruce.NativeImpl",
-  "methods":[{"name":"main","parameterTypes":["java.lang.String[]"] }]
-},
-{
   "name":"java.lang.String",
   "methods":[
     {"name":"lastIndexOf","parameterTypes":["int"] }, 
