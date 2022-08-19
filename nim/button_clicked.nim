@@ -20,7 +20,6 @@ proc callback(thread: ptr IsolateThread, event: pointer) =
 var listener = createListener(isolateThread, callback);
 widgetAddListener(isolateThread, button, 13, listener);
 
-
 var rowLayout = newRowLayout(isolateThread);
 compositeSetLayout(isolate_thread, shell, rowLayout);
 controlPack(isolate_thread, shell);
@@ -30,13 +29,3 @@ shellOpen(isolateThread, shell)
 while not bool(widgetIsDisposed(isolateThread, shell)):
   if not bool(displayReadAndDispatch(isolateThread, display)):
     discard displaySleep(isolateThread, display)
-
-
-
-    # ret = graal_tear_down_isolate(isolate_thread);
-    # if (ret != 0) {
-    #     fprintf(stderr, "graal_tear_down_isolate: %d\n", ret);
-    #     return 1;
-    # }
-
-    # return 0;

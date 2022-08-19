@@ -1,5 +1,6 @@
  {.deadCodeElim: on.}
 import graal_isolate
+
 when defined(windows):
   const
     swt* = "swt.dll"
@@ -1646,6 +1647,26 @@ proc gestureevent_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdec
     importc: "gestureevent_to_string", dynlib: swt.}
 proc create_gesture_listener*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
     importc: "create_gesture_listener", dynlib: swt.}
+proc new_glyphmetrics*(a1: ptr IsolateThread; a2: cint; a3: cint; a4: cint): pointer {.
+    cdecl, importc: "new_glyphmetrics", dynlib: swt.}
+proc glyphmetrics_ascent*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "glyphmetrics_ascent", dynlib: swt.}
+proc glyphmetrics_assign_ascent*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "glyphmetrics_assign_ascent", dynlib: swt.}
+proc glyphmetrics_descent*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "glyphmetrics_descent", dynlib: swt.}
+proc glyphmetrics_assign_descent*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "glyphmetrics_assign_descent", dynlib: swt.}
+proc glyphmetrics_width*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "glyphmetrics_width", dynlib: swt.}
+proc glyphmetrics_assign_width*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "glyphmetrics_assign_width", dynlib: swt.}
+proc glyphmetrics_equals*(a1: ptr IsolateThread; a2: pointer; a3: pointer): char {.cdecl,
+    importc: "glyphmetrics_equals", dynlib: swt.}
+proc glyphmetrics_hash_code*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "glyphmetrics_hash_code", dynlib: swt.}
+proc glyphmetrics_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
+    importc: "glyphmetrics_to_string", dynlib: swt.}
 proc new_griddata*(a1: ptr IsolateThread): pointer {.cdecl, importc: "new_griddata",
     dynlib: swt.}
 proc new_griddata_2*(a1: ptr IsolateThread; a2: cint): pointer {.cdecl,
@@ -1793,6 +1814,138 @@ proc ime_get_wide_caret*(a1: ptr IsolateThread; a2: pointer): char {.cdecl,
     importc: "ime_get_wide_caret", dynlib: swt.}
 proc ime_set_composition_offset*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
     importc: "ime_set_composition_offset", dynlib: swt.}
+proc new_imagedata*(a1: ptr IsolateThread; a2: cint; a3: cint; a4: cint; a5: pointer): pointer {.
+    cdecl, importc: "new_imagedata", dynlib: swt.}
+proc new_imagedata_2*(a1: ptr IsolateThread; a2: cint; a3: cint; a4: cint; a5: pointer;
+                     a6: cint; a7: pointer): pointer {.cdecl,
+    importc: "new_imagedata_2", dynlib: swt.}
+proc new_imagedata_3*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "new_imagedata_3", dynlib: swt.}
+proc new_imagedata_4*(a1: ptr IsolateThread; a2: cstring): pointer {.cdecl,
+    importc: "new_imagedata_4", dynlib: swt.}
+proc imagedata_width*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_width", dynlib: swt.}
+proc imagedata_assign_width*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "imagedata_assign_width", dynlib: swt.}
+proc imagedata_height*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_height", dynlib: swt.}
+proc imagedata_assign_height*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "imagedata_assign_height", dynlib: swt.}
+proc imagedata_depth*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_depth", dynlib: swt.}
+proc imagedata_assign_depth*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "imagedata_assign_depth", dynlib: swt.}
+proc imagedata_scanline_pad*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_scanline_pad", dynlib: swt.}
+proc imagedata_assign_scanline_pad*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "imagedata_assign_scanline_pad", dynlib: swt.}
+proc imagedata_bytes_per_line*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_bytes_per_line", dynlib: swt.}
+proc imagedata_assign_bytes_per_line*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "imagedata_assign_bytes_per_line", dynlib: swt.}
+proc imagedata_data*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "imagedata_data", dynlib: swt.}
+proc imagedata_assign_data*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,
+    importc: "imagedata_assign_data", dynlib: swt.}
+proc imagedata_palette*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "imagedata_palette", dynlib: swt.}
+proc imagedata_assign_palette*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,
+    importc: "imagedata_assign_palette", dynlib: swt.}
+proc imagedata_transparent_pixel*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_transparent_pixel", dynlib: swt.}
+proc imagedata_assign_transparent_pixel*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "imagedata_assign_transparent_pixel", dynlib: swt.}
+proc imagedata_mask_data*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "imagedata_mask_data", dynlib: swt.}
+proc imagedata_assign_mask_data*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "imagedata_assign_mask_data", dynlib: swt.}
+proc imagedata_mask_pad*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_mask_pad", dynlib: swt.}
+proc imagedata_assign_mask_pad*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "imagedata_assign_mask_pad", dynlib: swt.}
+proc imagedata_alpha_data*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "imagedata_alpha_data", dynlib: swt.}
+proc imagedata_assign_alpha_data*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "imagedata_assign_alpha_data", dynlib: swt.}
+proc imagedata_alpha*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_alpha", dynlib: swt.}
+proc imagedata_assign_alpha*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "imagedata_assign_alpha", dynlib: swt.}
+proc imagedata_type*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_type", dynlib: swt.}
+proc imagedata_assign_type*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "imagedata_assign_type", dynlib: swt.}
+proc imagedata_x*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_x", dynlib: swt.}
+proc imagedata_assign_x*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "imagedata_assign_x", dynlib: swt.}
+proc imagedata_y*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_y", dynlib: swt.}
+proc imagedata_assign_y*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "imagedata_assign_y", dynlib: swt.}
+proc imagedata_disposal_method*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_disposal_method", dynlib: swt.}
+proc imagedata_assign_disposal_method*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "imagedata_assign_disposal_method", dynlib: swt.}
+proc imagedata_delay_time*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "imagedata_delay_time", dynlib: swt.}
+proc imagedata_assign_delay_time*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "imagedata_assign_delay_time", dynlib: swt.}
+proc imagedata_clone*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "imagedata_clone", dynlib: swt.}
+proc imagedata_get_alpha*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint): cint {.
+    cdecl, importc: "imagedata_get_alpha", dynlib: swt.}
+proc imagedata_get_alphas*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint;
+                          a5: cint; a6: pointer; a7: cint) {.cdecl,
+    importc: "imagedata_get_alphas", dynlib: swt.}
+proc imagedata_get_pixel*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint): cint {.
+    cdecl, importc: "imagedata_get_pixel", dynlib: swt.}
+proc imagedata_get_pixels*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint;
+                          a5: cint; a6: pointer; a7: cint) {.cdecl,
+    importc: "imagedata_get_pixels", dynlib: swt.}
+proc imagedata_get_pixels_2*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint;
+                            a5: cint; a6: pointer; a7: cint) {.cdecl,
+    importc: "imagedata_get_pixels_2", dynlib: swt.}
+proc imagedata_get_r_g_bs*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "imagedata_get_r_g_bs", dynlib: swt.}
+proc imagedata_get_transparency_mask*(a1: ptr IsolateThread; a2: pointer): pointer {.
+    cdecl, importc: "imagedata_get_transparency_mask", dynlib: swt.}
+proc imagedata_get_transparency_type*(a1: ptr IsolateThread; a2: pointer): cint {.
+    cdecl, importc: "imagedata_get_transparency_type", dynlib: swt.}
+proc imagedata_scaled_to*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint): pointer {.
+    cdecl, importc: "imagedata_scaled_to", dynlib: swt.}
+proc imagedata_set_alpha*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint; a5: cint) {.
+    cdecl, importc: "imagedata_set_alpha", dynlib: swt.}
+proc imagedata_set_alphas*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint;
+                          a5: cint; a6: pointer; a7: cint) {.cdecl,
+    importc: "imagedata_set_alphas", dynlib: swt.}
+proc imagedata_set_pixel*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint; a5: cint) {.
+    cdecl, importc: "imagedata_set_pixel", dynlib: swt.}
+proc imagedata_set_pixels*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint;
+                          a5: cint; a6: pointer; a7: cint) {.cdecl,
+    importc: "imagedata_set_pixels", dynlib: swt.}
+proc imagedata_set_pixels_2*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint;
+                            a5: cint; a6: pointer; a7: cint) {.cdecl,
+    importc: "imagedata_set_pixels_2", dynlib: swt.}
+proc new_imageloaderevent*(a1: ptr IsolateThread; a2: pointer; a3: pointer; a4: cint;
+                          a5: cint): pointer {.cdecl,
+    importc: "new_imageloaderevent", dynlib: swt.}
+proc imageloaderevent_image_data*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "imageloaderevent_image_data", dynlib: swt.}
+proc imageloaderevent_assign_image_data*(a1: ptr IsolateThread; a2: pointer;
+                                        a3: pointer) {.cdecl,
+    importc: "imageloaderevent_assign_image_data", dynlib: swt.}
+proc imageloaderevent_increment_count*(a1: ptr IsolateThread; a2: pointer): cint {.
+    cdecl, importc: "imageloaderevent_increment_count", dynlib: swt.}
+proc imageloaderevent_assign_increment_count*(a1: ptr IsolateThread; a2: pointer;
+    a3: cint) {.cdecl, importc: "imageloaderevent_assign_increment_count",
+              dynlib: swt.}
+proc imageloaderevent_end_of_image*(a1: ptr IsolateThread; a2: pointer): char {.cdecl,
+    importc: "imageloaderevent_end_of_image", dynlib: swt.}
+proc imageloaderevent_assign_end_of_image*(a1: ptr IsolateThread; a2: pointer;
+    a3: cint) {.cdecl, importc: "imageloaderevent_assign_end_of_image", dynlib: swt.}
+proc imageloaderevent_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
+    importc: "imageloaderevent_to_string", dynlib: swt.}
 proc create_image_loader_listener*(a1: ptr IsolateThread; a2: pointer): pointer {.
     cdecl, importc: "create_image_loader_listener", dynlib: swt.}
 proc new_imageloader*(a1: ptr IsolateThread): pointer {.cdecl,
@@ -1946,6 +2099,45 @@ proc label_set_image*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,
     importc: "label_set_image", dynlib: swt.}
 proc label_set_text*(a1: ptr IsolateThread; a2: pointer; a3: cstring) {.cdecl,
     importc: "label_set_text", dynlib: swt.}
+proc new_lineattributes*(a1: ptr IsolateThread; a2: cfloat): pointer {.cdecl,
+    importc: "new_lineattributes", dynlib: swt.}
+proc new_lineattributes_2*(a1: ptr IsolateThread; a2: cfloat; a3: cint; a4: cint): pointer {.
+    cdecl, importc: "new_lineattributes_2", dynlib: swt.}
+proc new_lineattributes_3*(a1: ptr IsolateThread; a2: cfloat; a3: cint; a4: cint;
+                          a5: cint; a6: pointer; a7: cfloat; a8: cfloat): pointer {.
+    cdecl, importc: "new_lineattributes_3", dynlib: swt.}
+proc lineattributes_width*(a1: ptr IsolateThread; a2: pointer): cfloat {.cdecl,
+    importc: "lineattributes_width", dynlib: swt.}
+proc lineattributes_assign_width*(a1: ptr IsolateThread; a2: pointer; a3: cfloat) {.
+    cdecl, importc: "lineattributes_assign_width", dynlib: swt.}
+proc lineattributes_style*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "lineattributes_style", dynlib: swt.}
+proc lineattributes_assign_style*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "lineattributes_assign_style", dynlib: swt.}
+proc lineattributes_cap*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "lineattributes_cap", dynlib: swt.}
+proc lineattributes_assign_cap*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "lineattributes_assign_cap", dynlib: swt.}
+proc lineattributes_join*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "lineattributes_join", dynlib: swt.}
+proc lineattributes_assign_join*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "lineattributes_assign_join", dynlib: swt.}
+proc lineattributes_dash*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "lineattributes_dash", dynlib: swt.}
+proc lineattributes_assign_dash*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "lineattributes_assign_dash", dynlib: swt.}
+proc lineattributes_dash_offset*(a1: ptr IsolateThread; a2: pointer): cfloat {.cdecl,
+    importc: "lineattributes_dash_offset", dynlib: swt.}
+proc lineattributes_assign_dash_offset*(a1: ptr IsolateThread; a2: pointer; a3: cfloat) {.
+    cdecl, importc: "lineattributes_assign_dash_offset", dynlib: swt.}
+proc lineattributes_miter_limit*(a1: ptr IsolateThread; a2: pointer): cfloat {.cdecl,
+    importc: "lineattributes_miter_limit", dynlib: swt.}
+proc lineattributes_assign_miter_limit*(a1: ptr IsolateThread; a2: pointer; a3: cfloat) {.
+    cdecl, importc: "lineattributes_assign_miter_limit", dynlib: swt.}
+proc lineattributes_equals*(a1: ptr IsolateThread; a2: pointer; a3: pointer): char {.
+    cdecl, importc: "lineattributes_equals", dynlib: swt.}
+proc lineattributes_hash_code*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "lineattributes_hash_code", dynlib: swt.}
 proc new_link*(a1: ptr IsolateThread; a2: pointer; a3: cint): pointer {.cdecl,
     importc: "new_link", dynlib: swt.}
 proc link_add_selection_listener*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
@@ -2272,6 +2464,56 @@ proc paintevent_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
     importc: "paintevent_to_string", dynlib: swt.}
 proc create_paint_listener*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
     importc: "create_paint_listener", dynlib: swt.}
+proc new_palettedata*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "new_palettedata", dynlib: swt.}
+proc new_palettedata_2*(a1: ptr IsolateThread; a2: cint; a3: cint; a4: cint): pointer {.
+    cdecl, importc: "new_palettedata_2", dynlib: swt.}
+proc palettedata_is_direct*(a1: ptr IsolateThread; a2: pointer): char {.cdecl,
+    importc: "palettedata_is_direct", dynlib: swt.}
+proc palettedata_assign_is_direct*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "palettedata_assign_is_direct", dynlib: swt.}
+proc palettedata_colors*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "palettedata_colors", dynlib: swt.}
+proc palettedata_assign_colors*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "palettedata_assign_colors", dynlib: swt.}
+proc palettedata_red_mask*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "palettedata_red_mask", dynlib: swt.}
+proc palettedata_assign_red_mask*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "palettedata_assign_red_mask", dynlib: swt.}
+proc palettedata_green_mask*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "palettedata_green_mask", dynlib: swt.}
+proc palettedata_assign_green_mask*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "palettedata_assign_green_mask", dynlib: swt.}
+proc palettedata_blue_mask*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "palettedata_blue_mask", dynlib: swt.}
+proc palettedata_assign_blue_mask*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "palettedata_assign_blue_mask", dynlib: swt.}
+proc palettedata_red_shift*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "palettedata_red_shift", dynlib: swt.}
+proc palettedata_assign_red_shift*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "palettedata_assign_red_shift", dynlib: swt.}
+proc palettedata_green_shift*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "palettedata_green_shift", dynlib: swt.}
+proc palettedata_assign_green_shift*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "palettedata_assign_green_shift", dynlib: swt.}
+proc palettedata_blue_shift*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "palettedata_blue_shift", dynlib: swt.}
+proc palettedata_assign_blue_shift*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "palettedata_assign_blue_shift", dynlib: swt.}
+proc palettedata_get_pixel*(a1: ptr IsolateThread; a2: pointer; a3: pointer): cint {.
+    cdecl, importc: "palettedata_get_pixel", dynlib: swt.}
+proc palettedata_get_r_g_b*(a1: ptr IsolateThread; a2: pointer; a3: cint): pointer {.
+    cdecl, importc: "palettedata_get_r_g_b", dynlib: swt.}
+proc palettedata_get_r_g_bs*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "palettedata_get_r_g_bs", dynlib: swt.}
+proc pathdata_types*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "pathdata_types", dynlib: swt.}
+proc pathdata_assign_types*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,
+    importc: "pathdata_assign_types", dynlib: swt.}
+proc pathdata_points*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "pathdata_points", dynlib: swt.}
+proc pathdata_assign_points*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,
+    importc: "pathdata_assign_points", dynlib: swt.}
 proc new_path*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
     importc: "new_path", dynlib: swt.}
 proc new_path_2*(a1: ptr IsolateThread; a2: pointer; a3: pointer; a4: cfloat): pointer {.
@@ -2329,6 +2571,22 @@ proc pattern_is_disposed*(a1: ptr IsolateThread; a2: pointer): char {.cdecl,
     importc: "pattern_is_disposed", dynlib: swt.}
 proc pattern_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
     importc: "pattern_to_string", dynlib: swt.}
+proc new_point*(a1: ptr IsolateThread; a2: cint; a3: cint): pointer {.cdecl,
+    importc: "new_point", dynlib: swt.}
+proc point_x*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl, importc: "point_x",
+    dynlib: swt.}
+proc point_assign_x*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "point_assign_x", dynlib: swt.}
+proc point_y*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl, importc: "point_y",
+    dynlib: swt.}
+proc point_assign_y*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "point_assign_y", dynlib: swt.}
+proc point_equals*(a1: ptr IsolateThread; a2: pointer; a3: pointer): char {.cdecl,
+    importc: "point_equals", dynlib: swt.}
+proc point_hash_code*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "point_hash_code", dynlib: swt.}
+proc point_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
+    importc: "point_to_string", dynlib: swt.}
 proc new_progressbar*(a1: ptr IsolateThread; a2: pointer; a3: cint): pointer {.cdecl,
     importc: "new_progressbar", dynlib: swt.}
 proc progressbar_compute_size*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint;
@@ -2350,6 +2608,91 @@ proc progressbar_set_selection*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
     importc: "progressbar_set_selection", dynlib: swt.}
 proc progressbar_set_state*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
     importc: "progressbar_set_state", dynlib: swt.}
+proc new_rgba*(a1: ptr IsolateThread; a2: cint; a3: cint; a4: cint; a5: cint): pointer {.
+    cdecl, importc: "new_rgba", dynlib: swt.}
+proc new_rgba_2*(a1: ptr IsolateThread; a2: cfloat; a3: cfloat; a4: cfloat; a5: cfloat): pointer {.
+    cdecl, importc: "new_rgba_2", dynlib: swt.}
+proc rgba_rgb*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "rgba_rgb", dynlib: swt.}
+proc rgba_alpha*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "rgba_alpha", dynlib: swt.}
+proc rgba_assign_alpha*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "rgba_assign_alpha", dynlib: swt.}
+proc rgba_get_h_s_b_a*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "rgba_get_h_s_b_a", dynlib: swt.}
+proc rgba_equals*(a1: ptr IsolateThread; a2: pointer; a3: pointer): char {.cdecl,
+    importc: "rgba_equals", dynlib: swt.}
+proc rgba_hash_code*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "rgba_hash_code", dynlib: swt.}
+proc rgba_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
+    importc: "rgba_to_string", dynlib: swt.}
+proc new_rgb*(a1: ptr IsolateThread; a2: cint; a3: cint; a4: cint): pointer {.cdecl,
+    importc: "new_rgb", dynlib: swt.}
+proc new_rgb_2*(a1: ptr IsolateThread; a2: cfloat; a3: cfloat; a4: cfloat): pointer {.
+    cdecl, importc: "new_rgb_2", dynlib: swt.}
+proc rgb_red*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl, importc: "rgb_red",
+    dynlib: swt.}
+proc rgb_assign_red*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "rgb_assign_red", dynlib: swt.}
+proc rgb_green*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl, importc: "rgb_green",
+    dynlib: swt.}
+proc rgb_assign_green*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "rgb_assign_green", dynlib: swt.}
+proc rgb_blue*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl, importc: "rgb_blue",
+    dynlib: swt.}
+proc rgb_assign_blue*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "rgb_assign_blue", dynlib: swt.}
+proc rgb_get_h_s_b*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "rgb_get_h_s_b", dynlib: swt.}
+proc rgb_equals*(a1: ptr IsolateThread; a2: pointer; a3: pointer): char {.cdecl,
+    importc: "rgb_equals", dynlib: swt.}
+proc rgb_hash_code*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "rgb_hash_code", dynlib: swt.}
+proc rgb_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
+    importc: "rgb_to_string", dynlib: swt.}
+proc new_rectangle*(a1: ptr IsolateThread; a2: cint; a3: cint; a4: cint; a5: cint): pointer {.
+    cdecl, importc: "new_rectangle", dynlib: swt.}
+proc rectangle_x*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "rectangle_x", dynlib: swt.}
+proc rectangle_assign_x*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "rectangle_assign_x", dynlib: swt.}
+proc rectangle_y*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "rectangle_y", dynlib: swt.}
+proc rectangle_assign_y*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "rectangle_assign_y", dynlib: swt.}
+proc rectangle_width*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "rectangle_width", dynlib: swt.}
+proc rectangle_assign_width*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "rectangle_assign_width", dynlib: swt.}
+proc rectangle_height*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "rectangle_height", dynlib: swt.}
+proc rectangle_assign_height*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "rectangle_assign_height", dynlib: swt.}
+proc rectangle_add*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,
+    importc: "rectangle_add", dynlib: swt.}
+proc rectangle_contains*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint): char {.
+    cdecl, importc: "rectangle_contains", dynlib: swt.}
+proc rectangle_contains_2*(a1: ptr IsolateThread; a2: pointer; a3: pointer): char {.
+    cdecl, importc: "rectangle_contains_2", dynlib: swt.}
+proc rectangle_equals*(a1: ptr IsolateThread; a2: pointer; a3: pointer): char {.cdecl,
+    importc: "rectangle_equals", dynlib: swt.}
+proc rectangle_hash_code*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "rectangle_hash_code", dynlib: swt.}
+proc rectangle_intersect*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,
+    importc: "rectangle_intersect", dynlib: swt.}
+proc rectangle_intersection*(a1: ptr IsolateThread; a2: pointer; a3: pointer): pointer {.
+    cdecl, importc: "rectangle_intersection", dynlib: swt.}
+proc rectangle_intersects*(a1: ptr IsolateThread; a2: pointer; a3: cint; a4: cint;
+                          a5: cint; a6: cint): char {.cdecl,
+    importc: "rectangle_intersects", dynlib: swt.}
+proc rectangle_intersects_2*(a1: ptr IsolateThread; a2: pointer; a3: pointer): char {.
+    cdecl, importc: "rectangle_intersects_2", dynlib: swt.}
+proc rectangle_is_empty*(a1: ptr IsolateThread; a2: pointer): char {.cdecl,
+    importc: "rectangle_is_empty", dynlib: swt.}
+proc rectangle_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
+    importc: "rectangle_to_string", dynlib: swt.}
+proc rectangle_union*(a1: ptr IsolateThread; a2: pointer; a3: pointer): pointer {.cdecl,
+    importc: "rectangle_union", dynlib: swt.}
 proc new_region*(a1: ptr IsolateThread): pointer {.cdecl, importc: "new_region",
     dynlib: swt.}
 proc new_region_2*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
@@ -2405,6 +2748,12 @@ proc region_translate_2*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdec
     importc: "region_translate_2", dynlib: swt.}
 proc region_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
     importc: "region_to_string", dynlib: swt.}
+proc resource_dispose*(a1: ptr IsolateThread; a2: pointer) {.cdecl,
+    importc: "resource_dispose", dynlib: swt.}
+proc resource_get_device*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "resource_get_device", dynlib: swt.}
+proc resource_is_disposed*(a1: ptr IsolateThread; a2: pointer): char {.cdecl,
+    importc: "resource_is_disposed", dynlib: swt.}
 proc new_rowdata*(a1: ptr IsolateThread): pointer {.cdecl, importc: "new_rowdata",
     dynlib: swt.}
 proc new_rowdata_2*(a1: ptr IsolateThread; a2: cint; a3: cint): pointer {.cdecl,
@@ -2485,6 +2834,50 @@ proc rowlayout_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
     importc: "rowlayout_to_string", dynlib: swt.}
 proc create_runnable*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
     importc: "create_runnable", dynlib: swt.}
+proc new_swterror*(a1: ptr IsolateThread): pointer {.cdecl, importc: "new_swterror",
+    dynlib: swt.}
+proc new_swterror_2*(a1: ptr IsolateThread; a2: cstring): pointer {.cdecl,
+    importc: "new_swterror_2", dynlib: swt.}
+proc new_swterror_3*(a1: ptr IsolateThread; a2: cint): pointer {.cdecl,
+    importc: "new_swterror_3", dynlib: swt.}
+proc new_swterror_4*(a1: ptr IsolateThread; a2: cint; a3: cstring): pointer {.cdecl,
+    importc: "new_swterror_4", dynlib: swt.}
+proc swterror_code*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "swterror_code", dynlib: swt.}
+proc swterror_assign_code*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "swterror_assign_code", dynlib: swt.}
+proc swterror_throwable*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "swterror_throwable", dynlib: swt.}
+proc swterror_assign_throwable*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "swterror_assign_throwable", dynlib: swt.}
+proc swterror_get_cause*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "swterror_get_cause", dynlib: swt.}
+proc swterror_get_message*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
+    importc: "swterror_get_message", dynlib: swt.}
+proc swterror_print_stack_trace*(a1: ptr IsolateThread; a2: pointer) {.cdecl,
+    importc: "swterror_print_stack_trace", dynlib: swt.}
+proc new_swtexception*(a1: ptr IsolateThread): pointer {.cdecl,
+    importc: "new_swtexception", dynlib: swt.}
+proc new_swtexception_2*(a1: ptr IsolateThread; a2: cstring): pointer {.cdecl,
+    importc: "new_swtexception_2", dynlib: swt.}
+proc new_swtexception_3*(a1: ptr IsolateThread; a2: cint): pointer {.cdecl,
+    importc: "new_swtexception_3", dynlib: swt.}
+proc new_swtexception_4*(a1: ptr IsolateThread; a2: cint; a3: cstring): pointer {.cdecl,
+    importc: "new_swtexception_4", dynlib: swt.}
+proc swtexception_code*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "swtexception_code", dynlib: swt.}
+proc swtexception_assign_code*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "swtexception_assign_code", dynlib: swt.}
+proc swtexception_throwable*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "swtexception_throwable", dynlib: swt.}
+proc swtexception_assign_throwable*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "swtexception_assign_throwable", dynlib: swt.}
+proc swtexception_get_cause*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "swtexception_get_cause", dynlib: swt.}
+proc swtexception_get_message*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
+    importc: "swtexception_get_message", dynlib: swt.}
+proc swtexception_print_stack_trace*(a1: ptr IsolateThread; a2: pointer) {.cdecl,
+    importc: "swtexception_print_stack_trace", dynlib: swt.}
 proc new_sash*(a1: ptr IsolateThread; a2: pointer; a3: cint): pointer {.cdecl,
     importc: "new_sash", dynlib: swt.}
 proc sash_add_selection_listener*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
@@ -3302,6 +3695,70 @@ proc textlayout_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
     importc: "textlayout_to_string", dynlib: swt.}
 proc textlayout_set_default_tab_width*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
     cdecl, importc: "textlayout_set_default_tab_width", dynlib: swt.}
+proc new_textstyle*(a1: ptr IsolateThread): pointer {.cdecl, importc: "new_textstyle",
+    dynlib: swt.}
+proc new_textstyle_2*(a1: ptr IsolateThread; a2: pointer; a3: pointer; a4: pointer): pointer {.
+    cdecl, importc: "new_textstyle_2", dynlib: swt.}
+proc new_textstyle_3*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "new_textstyle_3", dynlib: swt.}
+proc textstyle_font*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "textstyle_font", dynlib: swt.}
+proc textstyle_assign_font*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,
+    importc: "textstyle_assign_font", dynlib: swt.}
+proc textstyle_foreground*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "textstyle_foreground", dynlib: swt.}
+proc textstyle_assign_foreground*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "textstyle_assign_foreground", dynlib: swt.}
+proc textstyle_background*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "textstyle_background", dynlib: swt.}
+proc textstyle_assign_background*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "textstyle_assign_background", dynlib: swt.}
+proc textstyle_underline*(a1: ptr IsolateThread; a2: pointer): char {.cdecl,
+    importc: "textstyle_underline", dynlib: swt.}
+proc textstyle_assign_underline*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "textstyle_assign_underline", dynlib: swt.}
+proc textstyle_underline_color*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "textstyle_underline_color", dynlib: swt.}
+proc textstyle_assign_underline_color*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "textstyle_assign_underline_color", dynlib: swt.}
+proc textstyle_underline_style*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "textstyle_underline_style", dynlib: swt.}
+proc textstyle_assign_underline_style*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "textstyle_assign_underline_style", dynlib: swt.}
+proc textstyle_strikeout*(a1: ptr IsolateThread; a2: pointer): char {.cdecl,
+    importc: "textstyle_strikeout", dynlib: swt.}
+proc textstyle_assign_strikeout*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "textstyle_assign_strikeout", dynlib: swt.}
+proc textstyle_strikeout_color*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "textstyle_strikeout_color", dynlib: swt.}
+proc textstyle_assign_strikeout_color*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "textstyle_assign_strikeout_color", dynlib: swt.}
+proc textstyle_border_style*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "textstyle_border_style", dynlib: swt.}
+proc textstyle_assign_border_style*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.
+    cdecl, importc: "textstyle_assign_border_style", dynlib: swt.}
+proc textstyle_border_color*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "textstyle_border_color", dynlib: swt.}
+proc textstyle_assign_border_color*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.
+    cdecl, importc: "textstyle_assign_border_color", dynlib: swt.}
+proc textstyle_metrics*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "textstyle_metrics", dynlib: swt.}
+proc textstyle_assign_metrics*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,
+    importc: "textstyle_assign_metrics", dynlib: swt.}
+proc textstyle_rise*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "textstyle_rise", dynlib: swt.}
+proc textstyle_assign_rise*(a1: ptr IsolateThread; a2: pointer; a3: cint) {.cdecl,
+    importc: "textstyle_assign_rise", dynlib: swt.}
+proc textstyle_data*(a1: ptr IsolateThread; a2: pointer): pointer {.cdecl,
+    importc: "textstyle_data", dynlib: swt.}
+proc textstyle_assign_data*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,
+    importc: "textstyle_assign_data", dynlib: swt.}
+proc textstyle_equals*(a1: ptr IsolateThread; a2: pointer; a3: pointer): char {.cdecl,
+    importc: "textstyle_equals", dynlib: swt.}
+proc textstyle_hash_code*(a1: ptr IsolateThread; a2: pointer): cint {.cdecl,
+    importc: "textstyle_hash_code", dynlib: swt.}
+proc textstyle_to_string*(a1: ptr IsolateThread; a2: pointer): cstring {.cdecl,
+    importc: "textstyle_to_string", dynlib: swt.}
 proc new_text*(a1: ptr IsolateThread; a2: pointer; a3: cint): pointer {.cdecl,
     importc: "new_text", dynlib: swt.}
 proc text_add_modify_listener*(a1: ptr IsolateThread; a2: pointer; a3: pointer) {.cdecl,

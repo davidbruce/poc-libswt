@@ -80,13 +80,13 @@ public class Generator {
     private enum FieldMethodType { GETTER, SETTER }
     public static void main(String[] args) throws IOException {
         //TODO: Import parent class methods as well
-        //TODO: Look into CFunctionPointer for supporting callbacks
         var basePath = "./eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT/";
 
         //paths to parse
         var osPath = Path.of(basePath + "cocoa");
         var eventsPath = Path.of(basePath + "common/org/eclipse/swt/events");
         var commonLayout = Path.of(basePath + "common/org/eclipse/swt/layout");
+        var common = Path.of(basePath + "common/org/eclipse/swt/");
         var commonWidgets = Path.of(basePath + "common/org/eclipse/swt/widgets");
 
         //solver paths
@@ -106,6 +106,7 @@ public class Generator {
         processPath(osPath, config);
         processPath(commonWidgets, config);
         processPath(eventsPath, config);
+        processPath(common, config);
         processPath(commonLayout, config);
     }
 
@@ -114,6 +115,8 @@ public class Generator {
         root.tryToParse();
         root.getCompilationUnits().stream()
                 .filter(source -> source.getPrimaryType().get().isPublic())
+                .filter(source -> !source.getPrimaryType().get().getName().asString().equals("WidgetSpy"))
+                .filter(source -> !source.getPackageDeclaration().get().getNameAsString().contains("org.eclipse.swt.internal"))
 //                .filter(source -> !source.getPrimaryType().get().asClassOrInterfaceDeclaration().isInterface())
                 .forEach(source -> {
                     var type = source.getPrimaryType().get();
@@ -152,8 +155,10 @@ public class Generator {
                                 try {
                                     MethodSpec.Builder getter = wrapFields(source, typeName, field, FieldMethodType.GETTER);
                                     classSpec.addMethod(getter.build());
-                                    MethodSpec.Builder setter = wrapFields(source, typeName, field, FieldMethodType.SETTER);
-                                    classSpec.addMethod(setter.build());
+                                    if (!field.isFinal()) {
+                                        MethodSpec.Builder setter = wrapFields(source, typeName, field, FieldMethodType.SETTER);
+                                        classSpec.addMethod(setter.build());
+                                    }
                                 } catch (ClassNotFoundException e) {
                                     throw new RuntimeException(e);
                                 }
