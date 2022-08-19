@@ -1,27 +1,42 @@
-import graal_isolate, libnativeimpl
+import graal_isolate, libswt
 
 var ret = 0
-var isolate_thread: ptr Isolatethread
+var isolateThread: ptr Isolatethread
 
-ret = create_isolate(nil, nil, addr(isolate_thread))
+ret = createIsolate(nil, nil, addr(isolate_thread))
 echo ret
-var result = 0
-result = add(isolate_thread, 2, 3)
+
+var display = newDisplay(isolateThread)
+var shell = newShell3(isolateThread, display)
+shellSetText(isolateThread, shell, "Hello World!")
+
+var button = newButton(isolateThread, shell, 1);
+buttonSetText(isolateThread, button, "Click me!")
+
+proc callback(thread: ptr IsolateThread, event: pointer) =
+  var button = eventWidget(thread, event)
+  buttonSetText(thread, button, "Ya Clicked!")
+
+var listener = createListener(isolateThread, callback);
+widgetAddListener(isolateThread, button, 13, listener);
 
 
-# echo result
-# char *result = NULL;
-#     result = add(isolate_thread, "hello ", "world");
-#     if (result == NULL) {
-#         fprintf(stderr, "add() returned NULL\n");
-#         return 1;
-#     }
-#     printf("result: %s\n", result);
+var rowLayout = newRowLayout(isolateThread);
+compositeSetLayout(isolate_thread, shell, rowLayout);
+controlPack(isolate_thread, shell);
 
-#     ret = graal_tear_down_isolate(isolate_thread);
-#     if (ret != 0) {
-#         fprintf(stderr, "graal_tear_down_isolate: %d\n", ret);
-#         return 1;
-#     }
+shellOpen(isolateThread, shell)
+
+while not bool(widgetIsDisposed(isolateThread, shell)):
+  if not bool(displayReadAndDispatch(isolateThread, display)):
+    discard displaySleep(isolateThread, display)
+
+
+
+    # ret = graal_tear_down_isolate(isolate_thread);
+    # if (ret != 0) {
+    #     fprintf(stderr, "graal_tear_down_isolate: %d\n", ret);
+    #     return 1;
+    # }
 
     # return 0;

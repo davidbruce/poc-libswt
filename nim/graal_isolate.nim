@@ -47,7 +47,7 @@ type
 proc create_isolate*(params: ptr CreateIsolateParams;
                           isolate: ptr ptr Isolate;
                           thread: ptr ptr IsolateThread): cint {.cdecl,
-    importc: "graal_create_isolate", dynlib: "libnativeimpl.dylib".}
+    importc: "graal_create_isolate", dynlib: "libswt.dylib".}
 ##
 ##  Attaches the current thread to the passed isolate.
 ##  On failure, returns a non-zero value. On success, writes the address of the
@@ -58,7 +58,7 @@ proc create_isolate*(params: ptr CreateIsolateParams;
 
 proc attach_thread*(isolate: ptr Isolate;
                          thread: ptr ptr IsolateThread): cint {.cdecl,
-    importc: "graal_attach_thread", dynlib: "libnativeimpl.dylib".}
+    importc: "graal_attach_thread", dynlib: "libswt.dylib".}
 ##
 ##  Given an isolate to which the current thread is attached, returns the address of
 ##  the thread's associated isolate thread structure.  If the current thread is not
@@ -66,14 +66,14 @@ proc attach_thread*(isolate: ptr Isolate;
 ##
 
 proc get_current_thread*(isolate: ptr Isolate): ptr IsolateThread {.
-    cdecl, importc: "graal_get_current_thread", dynlib: "libnativeimpl.dylib".}
+    cdecl, importc: "graal_get_current_thread", dynlib: "libswt.dylib".}
 ##
 ##  Given an isolate thread structure, determines to which isolate it belongs and returns
 ##  the address of its isolate structure. If an error occurs, returns NULL instead.
 ##
 
 proc get_isolate*(thread: ptr IsolateThread): ptr Isolate {.
-    cdecl, importc: "graal_get_isolate", dynlib: "libnativeimpl.dylib".}
+    cdecl, importc: "graal_get_isolate", dynlib: "libswt.dylib".}
 ##
 ##  Detaches the passed isolate thread from its isolate and discards any state or
 ##  context that is associated with it. At the time of the call, no code may still
@@ -82,7 +82,7 @@ proc get_isolate*(thread: ptr IsolateThread): ptr Isolate {.
 ##
 
 proc detach_thread*(thread: ptr IsolateThread): cint {.cdecl,
-    importc: "graal_detach_thread", dynlib: "libnativeimpl.dylib".}
+    importc: "graal_detach_thread", dynlib: "libswt.dylib".}
 ##
 ##  Tears down the passed isolate, waiting for any attached threads to detach from
 ##  it, then discards the isolate's objects, threads, and any other state or context
@@ -91,7 +91,7 @@ proc detach_thread*(thread: ptr IsolateThread): cint {.cdecl,
 ##
 
 proc tear_down_isolate*(isolateThread: ptr IsolateThread): cint {.
-    cdecl, importc: "graal_tear_down_isolate", dynlib: "libnativeimpl.dylib".}
+    cdecl, importc: "graal_tear_down_isolate", dynlib: "libswt.dylib".}
 ##
 ##  In the isolate of the passed isolate thread, detach all those threads that were
 ##  externally started (not within Java, which includes the "main thread") and were
@@ -108,4 +108,4 @@ proc tear_down_isolate*(isolateThread: ptr IsolateThread): cint {.
 proc detach_all_threads_and_tear_down_isolate*(
     isolateThread: ptr IsolateThread): cint {.cdecl,
     importc: "graal_detach_all_threads_and_tear_down_isolate",
-    dynlib: "libnativeimpl.dylib".}
+    dynlib: "libswt.dylib".}

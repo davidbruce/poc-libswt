@@ -1,0 +1,23 @@
+When making a new libswt shared lib from graalvm do the following
+
+1. Copy the libswt.h to this dir and add the following:
+
+#ifdef C2NIM
+#  dynlib swt
+#  cdecl
+#  mangle "graal_isolatethread_t" "IsolateThread"
+#  if defined(windows)
+#    define swt "swt.dll"
+#  elif defined(macosx)
+#    define swt "libswt.dylib"
+#  else
+#    define swt "libswt.so"
+#  endif
+#endif
+
+2. Run c2nim
+ ~/.nimble/bin/c2nim libswt.h
+
+3. Add import graal_isolate to the top of libswt.nim
+
+4. Fix potential double underscore errors
